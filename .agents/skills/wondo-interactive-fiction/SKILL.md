@@ -745,26 +745,26 @@ Full flag reference, exit codes, tunable thresholds, and extension points: `refe
 
 ## Phase 9 — Asset brief
 
-Runs in parallel with `verify-ink.ts` after all nine gates pass and the `.ink` is assembled. Produces `stories/{slug}/brief.md`, the asset-design contract that the `wondo-pixellab-assets` skill consumes.
+Runs in parallel with `verify-ink.ts` after all nine gates pass and the `.ink` is assembled. Produces `stories/{slug}/{slug}-brief.md`, the asset-design contract that the `wondo-pixellab-assets` skill consumes.
 
 You are the only place in the toolchain that has all the structured information the brief needs: the cast comment block (Gate 3), the endings comment block (Gate 4), the assembled knot tree (post-assembly), and the prose body (the source of "what scenes are worth illustrating"). Drafting it here means the pixellab skill never has to re-derive this information.
 
 **Inputs**
 - The just-assembled `stories/{slug}/{slug}.ink` file.
-- The template at `.agents/skills/wondo-pixellab-assets/references/brief-template.md`. Treat it as authoritative — every section header and field comes from there.
+- The template at `.agents/skills/wondo-interactive-fiction/references/brief-template.md`. Treat it as authoritative — every section header and field comes from there.
 
-**Walk the file and populate the template fields:**
+**Walk the ink file and then populate the template fields from `.agents/skills/wondo-interactive-fiction/references/brief-template.md`:**
 
 1. **Header** — title, slug, source path (`stories/{slug}/{slug}.ink`), generation date.
-2. **Cast** — parse the `// Cast (locked at Gate 3):` comment block. Each character becomes a row with name, motivation, screen-time. Leave the per-character pixellab prompt blank for the author to write later.
+2. **Cast** — parse the `// Cast (locked at Gate 3):` comment block. Each character becomes a row with name, motivation, screen-time. Produce the per-character pixellab prompt but keep it focused on a few character details.
 3. **Endings** — parse the `// Endings (locked at Gate 4):` comment block. Endings don't get illustrations directly, but they appear in the brief as context.
-4. **Scenes** — walk knot bodies. For each knot whose body contains a clearly-illustratable beat (a location change, a gesture, a tagged `# SCENE: <n>` line), emit a scene row. Default cap: ~10 scenes; the author can prune. Each scene row carries the knot name and a one-line beat description; leave the pixellab prompt blank.
-5. **Objects** — leave as a placeholder section. Objects don't have a structured comment block — the author fills these in based on what they know is plot-critical (Gate 7 items partially overlap, but pixellab's "objects" are visual props, not Gate 7 inventory tokens, so don't auto-populate from items).
-6. **Ideation prompt / cover prompt / style suffix / palette** — leave blank with comments explaining what goes there. The author tunes these before invoking pixellab.
+4. **Scenes** — walk knot bodies. For each knot whose body contains a clearly-illustratable beat, chapter or a frequented location, emit a scene row. Default cap: ~10 scenes; but the author can prune. Each scene row carries the knot name and a stylistic but focused description. Describe the visual elements and mood for each scene.
+5. **Objects** — Optional to stories. Find objects that are plot-critical (Gate 7 items partially overlap, but pixellab's "objects" are visual props, not Gate 7 inventory tokens, so don't auto-populate from items).
+6. **Ideation prompt / cover prompt / style suffix / palette** — Generate what goes there. The author then tunes these before invoking pixellab.
 
 **Failure handling.** If the brief template can't be read, surface a one-line warning ("brief template missing — pixellab skill won't run cleanly until you grab a copy") but don't block `verify-ink.ts`'s pass/fail signal. The brief is a downstream input, not a publish blocker.
 
-**Done message.** After both `verify-ink.ts` exit 0 AND `brief.md` is written, tell the author:
+**Done message.** After both `verify-ink.ts` exit 0 AND `{slug}-brief.md` is written, tell the author:
 
 > Story compiled and walked clean. Brief drafted at `stories/{slug}/brief.md`. Run `wondo-pixellab-assets` if you want illustrations, or ship the `.ink` to Wondo as-is.
 

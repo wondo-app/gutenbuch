@@ -1,6 +1,6 @@
 # Asset brief template
 
-The `wondo-rework` and `wondo-interactive-fiction` skills produce this file at `stories/<slug>/brief.md` after their gates pass. The user reviews and edits before invoking the pixellab pipeline. Numeric prefixes (`02`, `07`, …) become file prefixes inside `01-cast/`, `02-places/`, `03-items/`, etc.
+The `wondo-rework` and `wondo-interactive-fiction` skills produce this file at `stories/<slug>/{slug}-brief.md` after their gates pass. The user reviews and edits before invoking the pixellab pipeline. Numeric prefixes (`02`, `07`, …) become file prefixes inside `01-cast/`, `02-places/`, `03-items/`, etc.
 
 ```markdown
 # <Story Title> — Asset Brief
