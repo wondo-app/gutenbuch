@@ -1,4 +1,6 @@
 #!/usr/bin/env -S node --no-warnings=ExperimentalWarning
+import { existsSync, mkdirSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import {
   b64ToFile,
   extractFirstImage,
@@ -8,7 +10,35 @@ import {
   readPngSize,
   requireFlag,
   requireToken,
+  scalePngToFile,
 } from "./pl-poll.ts";
+
+// Bitforge requires init_image / inpainting_image / mask_image to match the
+// requested image_size exactly (rejected with 422 otherwise). Pre-scale to
+// the canvas size with nearest-neighbor and cache alongside the source,
+// matching pl-image.ts's reference convention.
+async function ensureAtSize(
+  srcPath: string,
+  canvasW: number,
+  canvasH: number,
+  label: string,
+): Promise<string> {
+  const dims = readPngSize(srcPath);
+  if (dims.width === canvasW && dims.height === canvasH) return srcPath;
+  const cacheDir = join(dirname(srcPath), ".cache");
+  if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+  const stem = basename(srcPath).replace(/\.png$/i, "");
+  const cached = join(cacheDir, `${stem}.scaled-${canvasW}x${canvasH}.png`);
+  if (!existsSync(cached)) {
+    await scalePngToFile(srcPath, cached, canvasW, canvasH);
+    console.error(
+      `[pl-bitforge] pre-scaled ${label} ${dims.width}x${dims.height} -> ${canvasW}x${canvasH}: ${cached}`,
+    );
+  } else {
+    console.error(`[pl-bitforge] reused cached scaled ${label}: ${cached}`);
+  }
+  return cached;
+}
 
 function usage(): never {
   console.error(`Usage:
@@ -72,25 +102,30 @@ async function main() {
   if (flags.bool.oblique) body.oblique_projection = true;
 
   if (flags.string.style) {
-    body.style_image = { type: "base64", base64: imgToB64(flags.string.style), format: "png" };
+    const usedStyle = await ensureAtSize(flags.string.style, width, height, "style");
+    body.style_image = { type: "base64", base64: imgToB64(usedStyle), format: "png" };
     if (flags.string["style-strength"]) {
       body.style_strength = parseFloat(flags.string["style-strength"]);
     }
   }
   if (flags.string.init) {
-    body.init_image = { type: "base64", base64: imgToB64(flags.string.init), format: "png" };
+    const usedInit = await ensureAtSize(flags.string.init, width, height, "init");
+    body.init_image = { type: "base64", base64: imgToB64(usedInit), format: "png" };
     if (flags.string["init-strength"]) {
       body.init_image_strength = parseInt(flags.string["init-strength"], 10);
     }
   }
   if (flags.string.color) {
-    body.color_image = { type: "base64", base64: imgToB64(flags.string.color), format: "png" };
+    const usedColor = await ensureAtSize(flags.string.color, width, height, "color");
+    body.color_image = { type: "base64", base64: imgToB64(usedColor), format: "png" };
   }
   if (flags.string.inpaint) {
-    body.inpainting_image = { type: "base64", base64: imgToB64(flags.string.inpaint), format: "png" };
+    const usedInpaint = await ensureAtSize(flags.string.inpaint, width, height, "inpaint");
+    body.inpainting_image = { type: "base64", base64: imgToB64(usedInpaint), format: "png" };
   }
   if (flags.string.mask) {
-    body.mask_image = { type: "base64", base64: imgToB64(flags.string.mask), format: "png" };
+    const usedMask = await ensureAtSize(flags.string.mask, width, height, "mask");
+    body.mask_image = { type: "base64", base64: imgToB64(usedMask), format: "png" };
   }
 
   console.error(

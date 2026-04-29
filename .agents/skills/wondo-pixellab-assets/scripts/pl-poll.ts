@@ -198,6 +198,10 @@ export function extractFirstImage(jobResult: unknown): string {
       image?: { base64?: string };
       base64?: string;
     };
+    // Top-level shape returned by sync endpoints (e.g. /create-image-pixen):
+    // { usage: {...}, image: { type: "base64", base64: "..." } }
+    image?: { base64?: string };
+    images?: Array<{ base64?: string }>;
   };
   const b64 =
     r.last_response?.images?.[0]?.base64 ??
@@ -205,7 +209,9 @@ export function extractFirstImage(jobResult: unknown): string {
     r.data?.images?.[0]?.base64 ??
     r.data?.images?.[0]?.image?.base64 ??
     r.data?.image?.base64 ??
-    r.data?.base64;
+    r.data?.base64 ??
+    r.image?.base64 ??
+    r.images?.[0]?.base64;
   if (!b64) {
     throw new Error(`No image in job result: ${JSON.stringify(r).slice(0, 400)}`);
   }

@@ -1,6 +1,6 @@
 ---
 name: wondo-pixellab-assets
-description: Generate story-consistent pixel art for a Wondo story via the PixelLab API (not the MCP). Drafts an asset brief from a story slug, then runs a seven-phase pipeline — ideation (pixen) → cover (pl-image) → cast (pixflux) → objects (pixflux) → scenes (pl-image) → 3× scale — with reference images carrying style and subject identity forward. Use when the user wants story illustrations, character portraits, scene banners, or any task involving "PixelLab," "asset brief," "pixel art for a story," "character consistency across scenes," or "illustration set."
+description: Generate story-consistent pixel art for a Wondo story via the PixelLab API (not the MCP). Drafts an asset brief from a story slug, then runs a seven-phase pipeline — ideation (pixen) → cover (pl-image) → cast (pl-style) → objects (pl-style) → scenes (pl-image) → 3× scale — with reference images carrying style and subject identity forward. Use when the user wants story illustrations, character portraits, scene banners, or any task involving "PixelLab," "asset brief," "pixel art for a story," "character consistency across scenes," or "illustration set."
 ---
 
 # PixelLab Story Assets
@@ -15,9 +15,9 @@ slug → brief draft
                                           → user picks 2
        → Phase 2: pl-image × 2 cover options (192×344, ref=picked thumbnail)
                                           → user APPROVES one
-       → Phase 3: pixflux cast portraits (192×192, init=APPROVED cover)
-       → Phase 4: pixflux objects        (192×192, init=APPROVED cover)
-       → Phase 5: pl-image scenes        (192×192, style=cover, refs=cast/objects)
+       → Phase 3: pl-style cast portraits (192×192, style=APPROVED cover, NO --no-bg)
+       → Phase 4: pl-style objects        (192×192, style=APPROVED cover, NO --no-bg)
+       → Phase 5: pl-image scenes         (192×192, style=cover, refs=cast/objects)
        → Phase 6: 3× nearest-neighbor scale (every PNG, no API calls)
 ```
 
@@ -33,7 +33,7 @@ Stop and ask the user to approve between each generation phase (1–5) — never
 
 2. **`PIXELLAB_TOKEN` must be set.** Get one at https://pixellab.ai/account and `export PIXELLAB_TOKEN=…`. The scripts hard-fail with a clear message if it's missing — don't guess and try anyway.
 
-3. **`no_background = true` for portraits and objects, never for scenes / covers / ideation.** Phase 3/4 outputs composite into Phase 5 scenes; they need transparent backgrounds. Scenes, covers, and ideation thumbnails *are* the background. Wired into the scripts as `--no-bg`; pass it on `pl-pixflux.ts` calls in Phases 3 and 4 only.
+3. **Background handling — model-specific.** Phase 5 scenes, the cover, and ideation thumbnails always keep their background. For portraits/objects (Phase 3/4), `pl-style.ts` (the recommended path) **must NOT receive `--no-bg`** — `/generate-with-style-v2` corrupts the output when `no_background: true` is sent alongside a `style_image`. Cast/object portraits ship with backgrounds; if a portrait needs to composite cleanly into a scene later, mask it post-generation with `pl-bitforge.ts --inpaint` + a mask painted over the background. The `--no-bg` flag only behaves correctly on `pl-pixflux.ts` and `pl-pixen.ts`, neither of which is the recommended Phase 3/4 path.
 
 4. **Two response patterns — sync and async.** `/create-image-pixen`, `/create-image-pixflux`, `/create-image-bitforge`, `/image-to-pixelart` are synchronous (HTTP 200 with image data) and don't need polling. `/generate-image-v2` and `/generate-with-style-v2` are async (`202 + job_id`) and `pl-poll.ts:pollJob` handles them. Don't bypass the polling helpers.
 
@@ -178,23 +178,24 @@ cp stories/<slug>/assets/01-cover/option-b.png \
 
 Note the approval in the seed log. Move to Phase 3.
 
-## Phase 3 — Cast portraits (pixflux + cover init)
+## Phase 3 — Cast portraits (`pl-style.ts` with cover as style)
 
-For each row in the brief's "Cast" table, in order, use the APPROVED cover as `init_image` so the portrait inherits the cover's palette and lighting:
+For each row in the brief's "Cast" table, in order. Use `pl-style.ts` (`/generate-with-style-v2`) with the APPROVED cover as `--style` — that endpoint's style transfer holds the cover's palette/grid/lighting while still generating distinct subjects from the prompt. **Do not pass `--no-bg`** (see gotcha #3); portraits ship with backgrounds and can be masked later via `pl-bitforge.ts --inpaint` if a clean composite is needed.
 
 ```bash
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
-  .agents/skills/wondo-pixellab-assets/scripts/pl-pixflux.ts \
-  --prompt "<character prompt + style suffix>" \
-  --init stories/<slug>/assets/01-cover/APPROVED.png \
-  --init-strength 300 \
+  .agents/skills/wondo-pixellab-assets/scripts/pl-style.ts \
+  --prompt "<character prompt>" \
+  --style stories/<slug>/assets/01-cover/APPROVED.png \
+  --style-description "<style suffix from the brief>" \
   --width 192 --height 192 \
-  --no-bg \
   --seed 200 \
   --out stories/<slug>/assets/02-cast/<##>-<char-slug>.png
 ```
 
-Increment seeds across characters (200, 201, …) so each portrait has a stable identity to re-roll back to. Skip any `<##>-*.png` that already exists. `init-strength` defaults to 300 — lower it (e.g., 200) if portraits over-inherit cover composition.
+The cover can be at its native 192×344 — `pl-style.ts` reads dimensions from the PNG IHDR; the style image does not need to match canvas size. Increment seeds across characters (200, 201, …) so each portrait has a stable identity to re-roll back to. Skip any `<##>-*.png` that already exists.
+
+`pl-style.ts` is async; the API rate-limits when 4+ jobs are pending, so prefer 3 in parallel.
 
 After all cast portraits exist, print a numbered list and ask:
 
@@ -209,9 +210,11 @@ Tell me which to approve, or "regen 03" to re-roll a portrait, or "regen 03 with
 
 **Stop.** On regenerate-with-hint, edit only the description, keep the same seed; on plain regenerate, increment the seed.
 
-## Phase 4 — Objects (pixflux + cover init)
+**Why not `pl-pixflux.ts --init`?** Empirically pixflux with the cover passed as `init_image` reproduces the cover almost verbatim regardless of `init-strength` — the prompt barely steers it. `pl-bitforge.ts --init` is even worse. `pl-style.ts` with `--style` is the only path that holds the aesthetic without copying the source. Use pixflux only when you want a hard composition lock (e.g., regenerating the same character at a slightly tweaked angle from a previous portrait).
 
-Identical loop to Phase 3 but reading the brief's "Objects" table; outputs land in `stories/<slug>/assets/03-objects/<##>-<slug>.png`. Same flags: `--init <APPROVED cover>`, `--width 192 --height 192`, `--no-bg`. Increment seeds 700, 701, … so cast and object seed ranges don't collide.
+## Phase 4 — Objects (`pl-style.ts` with cover as style)
+
+Identical loop to Phase 3 but reading the brief's "Objects" table; outputs land in `stories/<slug>/assets/03-objects/<##>-<slug>.png`. Same flags: `--style <APPROVED cover>`, `--style-description "<suffix>"`, `--width 192 --height 192`, **no `--no-bg`**. Increment seeds 700, 701, … so cast and object seed ranges don't collide.
 
 Stop and ask for approval the same way.
 
@@ -281,10 +284,12 @@ node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scri
   --width 192 --height 344 --seed 100 \
   --out stories/<slug>/assets/01-cover/option-a.png
 
-# Phase 3/4 — cast or object (init = APPROVED cover, no_bg, sync)
-node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-pixflux.ts \
-  --prompt "<…>" --init <APPROVED cover> --init-strength 300 \
-  --width 192 --height 192 --no-bg --seed 200 \
+# Phase 3/4 — cast or object (style = APPROVED cover, NO --no-bg, async)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-style.ts \
+  --prompt "<character/object prompt>" \
+  --style <APPROVED cover> \
+  --style-description "<style suffix from the brief>" \
+  --width 192 --height 192 --seed 200 \
   --out stories/<slug>/assets/02-cast/02-<slug>.png
 
 # Phase 5 — scene (style = cover, refs = cast/objects, max 4; refs auto-prescaled)

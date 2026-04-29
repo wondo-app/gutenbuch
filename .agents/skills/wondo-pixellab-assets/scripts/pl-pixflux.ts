@@ -1,4 +1,6 @@
 #!/usr/bin/env -S node --no-warnings=ExperimentalWarning
+import { existsSync, mkdirSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import {
   b64ToFile,
   extractFirstImage,
@@ -8,7 +10,34 @@ import {
   readPngSize,
   requireFlag,
   requireToken,
+  scalePngToFile,
 } from "./pl-poll.ts";
+
+// Pixflux's API requires init_image dimensions to match the requested
+// image_size exactly (rejected with 422 otherwise). Pre-scale the init to the
+// canvas size with nearest-neighbor and cache the result alongside the source,
+// matching the convention pl-image.ts uses for reference_images.
+async function ensureInitAtSize(
+  initPath: string,
+  canvasW: number,
+  canvasH: number,
+): Promise<string> {
+  const dims = readPngSize(initPath);
+  if (dims.width === canvasW && dims.height === canvasH) return initPath;
+  const cacheDir = join(dirname(initPath), ".cache");
+  if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+  const stem = basename(initPath).replace(/\.png$/i, "");
+  const cached = join(cacheDir, `${stem}.scaled-${canvasW}x${canvasH}.png`);
+  if (!existsSync(cached)) {
+    await scalePngToFile(initPath, cached, canvasW, canvasH);
+    console.error(
+      `[pl-pixflux] pre-scaled init ${dims.width}x${dims.height} -> ${canvasW}x${canvasH}: ${cached}`,
+    );
+  } else {
+    console.error(`[pl-pixflux] reused cached scaled init: ${cached}`);
+  }
+  return cached;
+}
 
 function usage(): never {
   console.error(`Usage:
@@ -66,7 +95,8 @@ async function main() {
   if (flags.bool.oblique) body.oblique_projection = true;
 
   if (initPath) {
-    body.init_image = { type: "base64", base64: imgToB64(initPath), format: "png" };
+    const usedInitPath = await ensureInitAtSize(initPath, width, height);
+    body.init_image = { type: "base64", base64: imgToB64(usedInitPath), format: "png" };
     body.init_image_strength = initStrength;
   }
   if (colorPath) {
