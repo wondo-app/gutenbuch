@@ -8,23 +8,16 @@
   "description": "Skills for authoring Wondo interactive fiction in Ink and generating story-consistent pixel art via PixelLab.",
   "plugins": [
     {
-      "name": "gutenbuch",
-      "source": "./",
-      "description": "Wondo authoring toolkit — bundles the wondo-interactive-fiction, wondo-rework, and wondo-pixellab-assets skills.",
-      "version": "0.1.0",
-      "license": "MIT",
-      "author": {
-        "name": "Vikram Rojo"
-      },
-      "homepage": "https://github.com/wondo-app/gutenbuch",
-      "keywords": [
-        "wondo",
-        "interactive-fiction",
-        "ink",
-        "gamebook",
-        "pixellab",
-        "pixel-art"
-      ]
+      "name": "wondo-interactive-fiction",
+      "source": "./.agents/skills/wondo-interactive-fiction"
+    },
+    {
+      "name": "wondo-rework",
+      "source": "./.agents/skills/wondo-rework"
+    },
+    {
+      "name": "wondo-pixellab-assets",
+      "source": "./.agents/skills/wondo-pixellab-assets"
     }
   ]
 }
