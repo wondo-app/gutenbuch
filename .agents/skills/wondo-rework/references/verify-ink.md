@@ -2,7 +2,7 @@
 
 Wondo gamebook verifier with multi-file support. Resolves `INCLUDE` directives transitively from a primary `.ink` file, compiles the inlined source with `inkjs.Compiler` (programmatic, in-process — no CLI binary), then runs N seeded random walks. Compares ending distribution against the `// Endings (locked at Gate N):` block (any digit; tolerates skill-version drift).
 
-Source: `.agents/skills/wondo-interactive-fiction/scripts/verify-ink.ts`.
+Source: `.agents/skills/wondo-rework/scripts/verify-ink.ts`.
 inkjs cache: `~/.cache/wondo-gamebook/node_modules/inkjs` (auto-installed on first run; ~30 MB).
 
 ## INCLUDE resolution
@@ -17,7 +17,7 @@ Static checks, compile, smoke walk, and distribution all run on the resolved sou
 
 ```
 node --no-warnings=ExperimentalWarning \
-  .agents/skills/wondo-interactive-fiction/scripts/verify-ink.ts <ink-file> [flags]
+  .agents/skills/wondo-rework/scripts/verify-ink.ts <ink-file> [flags]
 ```
 
 Node 22+ required; Node 24 has direct `.ts` execution as a stable feature.
@@ -99,7 +99,7 @@ Synthetic fixtures live in `.context/verify-ink-fixtures/` (gitignored, not part
 ```
 for f in happy dangling-divert skewed infinite legacy example-gate3; do
   node --no-warnings=ExperimentalWarning \
-    .agents/skills/wondo-interactive-fiction/scripts/verify-ink.ts \
+    .agents/skills/wondo-rework/scripts/verify-ink.ts \
     ".context/verify-ink-fixtures/$f.ink" --quiet
   echo "  exit=$?"
 done

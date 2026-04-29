@@ -19,9 +19,12 @@ function usage(): never {
               [--seed <n>]
               [--no-bg]
 
-Wraps POST /generate-with-style-v2. Used for CHARACTER PORTRAITS (Phase 2)
-and OBJECTS (Phase 3). The --style PNG is the APPROVED cover from Phase 1.
-Pass --no-bg so the asset composites cleanly into scenes.
+Wraps POST /generate-with-style-v2. Used for CAST PORTRAITS (Phase 3) and
+OBJECTS (Phase 4). The --style PNG is the APPROVED cover from Phase 2; its
+native dimensions can differ from the output canvas (API reads the PNG IHDR).
+DO NOT pass --no-bg — the endpoint corrupts output when no_background:true
+is sent alongside style_image; mask backgrounds post-generation via
+pl-bitforge.ts --inpaint if portraits need to composite into scenes.
 Reads PIXELLAB_TOKEN from env.`);
   process.exit(2);
 }
