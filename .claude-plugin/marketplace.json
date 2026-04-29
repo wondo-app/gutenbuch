@@ -1,26 +1,29 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "gutenbuch",
-  "owner": {
-    "name": "Wondo",
-    "url": "https://github.com/wondo-app/gutenbuch"
-  },
-  "description": "Skills for authoring Wondo interactive fiction in Ink and generating story-consistent pixel art via PixelLab.",
   "skills": [
     {
       "id": "wondo-interactive-fiction"
       "name": "Wondo Gamebook: Gated Authoring Skill",
+      "description": "A skill for creating interactive fiction."
       "source": "./.agents/skills/wondo-interactive-fiction"
     },
     {
       "id": "wondo-rework",
       "name": "Wondo Rework: Compressed Authoring Skill",
+      "description": "A compressed skill for creating interactive fiction."
       "source": "./.agents/skills/wondo-rework"
     },
     {
       "id": "wondo-pixellab-assets",
       "name": "PixelLab Story Assets",
+      "description": "A skill for creating assets for interactive fiction."
       "source": "./.agents/skills/wondo-pixellab-assets"
     }
-  ]
+  ],
+  "owner": {
+    "name": "Wondo",
+    "url": "https://github.com/wondo-app/gutenbuch"
+  },
+  "description": "Skills for authoring Wondo interactive fiction in Ink and generating story-consistent pixel art via PixelLab.",
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json"
 }
