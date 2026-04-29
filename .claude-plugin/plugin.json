@@ -1,0 +1,20 @@
+{
+  "name": "gutenbuch",
+  "version": "0.1.0",
+  "description": "Wondo authoring toolkit — skills for writing interactive fiction in Ink and generating story-consistent pixel art via PixelLab.",
+  "author": {
+    "name": "Vikram Rojo"
+  },
+  "homepage": "https://github.com/wondo-app/gutenbuch",
+  "repository": "https://github.com/wondo-app/gutenbuch",
+  "license": "MIT",
+  "keywords": [
+    "wondo",
+    "interactive-fiction",
+    "ink",
+    "gamebook",
+    "pixellab",
+    "pixel-art"
+  ],
+  "skills": "./.agents/skills/"
+}
