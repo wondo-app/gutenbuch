@@ -56,17 +56,17 @@ Beyond any doubt the old woman was in trouble. Four policemen were telling her o
 
 "That's tough," Baldy murmured. "How's she gonna explain it? She'll wind up in Bellevue."
 
-"Well, he didn't intend it," Lisbeth said, then turned on me. "Why don't you go down there and do something about it? Get her off — you can just tell them —"
+"Well, he didn't intend it," Lisbeth said, then turned on me. "Why don't you go down there and do something about it? Get her off. You can just tell them…"
 
-"Not me," I said. "You go. And I'll come to the asylum and try to get you out. This whole thing is crazy, and anybody connected with it —"
+"Not me," I said. "You go. And I'll come to the asylum and try to get you out. This whole thing is crazy, and anybody connected with it…"
 
-"It may be crazy, but it works," Baldy declared, mounting his soapbox. "Listen, you lugs — don't you realize what we've *got*? A gold mine. Fame. Fortune. We'll put Porky in the movies —"
+"It may be crazy, but it works," Baldy declared, mounting his soapbox. "Listen, you lugs. Don't you realize what we've *got*? A gold mine. Fame. Fortune. We'll put Porky in the movies."
 
-"I don't want to go in the movies," Porky said.
+"I don't want to be in movies," Porky said.
 
-"Vaudeville, then. The scientific wonder of the age. He takes possession of various people in the audience —"
+"Vaudeville, then. The scientific wonder of the age. He takes possession of various people in the audience and spills their secrets."
 
-"*Wouldn't* that make a hit with them," I retorted.
+"*Wouldn't* that make him popular," I retorted.
 
 It was then, I confess, that the big idea came to me. Money is wonderful, but what with all the publicity the war was getting, naturally it was on your mind even more than money. *How could we use Porky's gift to help with the war?*
 
@@ -80,11 +80,11 @@ I had a vivid imagination, and the thought gave it an immense stimulus. I was ab
 + [Let Lisbeth pull Porky aside before this goes anywhere.] -> lisbeth_intervenes
 
 === support_war ===
-I told them. Nazi submarines, lurking off our coast — we knew that. We go down near Sandy Hook. Porky doesn't actually have to *see* his victim, that's been demonstrated. He just mentally selects one of the lurking submarines and takes possession of its Commander. Has the Commander run the sub up on shore and smash it. Or open a valve and sink it. Or blow it up with one of its own torpedoes. In one split second he jumps out to the safety of his own body, which is with us on shore. Then he jumps into another sub. Then another. The Battle of the Atlantic is the big hitch in our war effort. Why, this would —
+I told them. Nazi submarines, lurking off our coast, we knew that. We go down near Sandy Hook. Porky doesn't actually have to *see* his victim, that's been demonstrated. He just mentally selects one of the lurking submarines and takes possession of its Commander. Has the Commander run the sub up on shore and smash it. Or open a valve and sink it. Or blow it up with one of its own torpedoes. In one split second he jumps out to the safety of his own body, which is with us on shore. Then he jumps into another sub. Then another. The Battle of the Atlantic is the big hitch in our war effort. Why, this would change everything.
 
-"And kill himself, too," Lisbeth murmured. "Dad, I thought you had better sense than —"
+"And kill himself, too," Lisbeth murmured. "Dad, I thought you had better sense than this."
 
-"Not at all," I said. But Baldy was already on it, getting bigger by the second. *When Hitler finds his subs aren't coming back* — and so on, and from there to Jap battleships, Jap generals ordering their men in the wrong direction, what chaos, what a cinch.
+"Not at all," I said. But Baldy was already on it, getting bigger by the second. *When Hitler finds his subs aren't coming back* and so on, and from there to the Emperor's battleships, Japan's generals ordering their men in the wrong direction, what chaos, what a cinch.
 
 Porky, very quietly: "Well, I won't do it."
 
@@ -92,17 +92,17 @@ Porky, very quietly: "Well, I won't do it."
 
 "More than just a chance," I added, "practically a sure thing."
 
-"All right," Porky said suddenly. "I'll try it. I'm no coward, if you go and put it that way. Only I sure hope it works."
+"All right, I'll try it. I'm no coward, if you go and put it that way. Only I sure hope it works."
 -> planning_evening
 
 === dial_back ===
-I started to say it, and then I caught Lisbeth's expression and let it taper into something more measured. The submarines, yes, but only if Porky was sure. Only as a test. *One* sub — see how the withdrawal worked from a body in real danger.
+I started to say it, and then I caught Lisbeth's expression and let it taper into something more measured. The submarines, yes, but only if Porky was sure. Only as a test. *One* sub just see how the withdrawal worked from a body in real danger.
 
 Porky listened, his hands shaking a little. "I sure hope it works," he said.
 
-Baldy was disappointed in me — I could see him deflating from a vaudeville impresario back into a cartoonist — but he conceded that one sub was better than none.
+Baldy was disappointed in me — I could see him deflating from a vaudeville impresario back into a cartoonist. But he conceded that one sub was better than none.
 
-"All right," Porky said. "I'll try it. Just the one, mind. Just to see."
+"All right," Porky said. "I'll try it. Just the one. Just to see."
 ~ porky_anxiety = porky_anxiety + 1
 -> planning_evening
 
@@ -117,9 +117,9 @@ Porky followed her like a man who has been thrown a rope in a flood. They went o
 
 Baldy started to object. Lisbeth gave him a look that shut him up.
 
-I said, "Lisbeth —"
+I said, "Lisbeth!"
 
-"Dad. He came here for help. We're going to actually help him."
+"Dad. He came here for help. So we're going to help him. Actually help him."
 
 And that, more or less, was that.
 ~ lisbeth_alarm = lisbeth_alarm - 1
@@ -136,7 +136,7 @@ We planned it for about an hour. About eleven o'clock that same night, we'd all 
 
 "And you be back here by eleven o'clock promptly," I warned. "Because the war depends on you."
 
-"Should you go A.W.O.L.," Baldy put in — and he didn't smile when he said it — "I will personally see that you get put into an insane asylum for the rest of your natural life."
+"Should you go AWOL," Baldy put in, and he didn't smile when he said it, "I will personally see that you get put into an insane asylum for the rest of your natural life."
 
 It occurred to me to mention that Porky could jump *out* of an insane asylum without much trouble, but I decided to keep that to myself.
 
