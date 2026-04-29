@@ -33,7 +33,7 @@ Flags:
   process.exit(2);
 }
 
-const PHASE_DIRS = ["01-cover", "02-cast", "03-objects", "04-scenes"] as const;
+const PHASE_DIRS = ["00-ideation", "01-cover", "02-cast", "03-objects", "04-scenes"] as const;
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);

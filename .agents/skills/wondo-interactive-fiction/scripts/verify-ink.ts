@@ -78,7 +78,7 @@ interface KnotReachVerdict {
 // CLI
 // =====================================================================
 
-function usage(): never {
+function usage(exitCode: number = 0): never {
   process.stderr.write(`Usage:
   verify-ink.ts <ink-file>
     [--runs <n>]            default 400
@@ -96,7 +96,7 @@ function usage(): never {
 Exits 0 on PASS; 1 on compile/runtime/static-error failure; 2 on
 distribution-rubric failure; 64/66/69/70 on invocation problems.
 `);
-  process.exit(2);
+  process.exit(exitCode);
 }
 
 interface Flags {
@@ -114,7 +114,8 @@ interface Flags {
 }
 
 function parseArgs(argv: string[]): Flags {
-  if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) usage();
+  if (argv.includes("--help") || argv.includes("-h")) usage(0);
+  if (argv.length === 0) usage(64);
 
   let inkFile: string | null = null;
   let runs = 400;
