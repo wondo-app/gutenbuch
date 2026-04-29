@@ -2,9 +2,12 @@
 
 Base: `https://api.pixellab.ai/v2`
 Auth: `Authorization: Bearer $PIXELLAB_TOKEN`
-All Pro endpoints return `202 { job_id }`. Poll `GET /background-jobs/{job_id}` until `status: "completed"`.
 
-Full reference: `.context/attachments/pixellab-api-guide.md` and https://api.pixellab.ai/v2/llms.txt.
+**Canonical source of truth:** https://api.pixellab.ai/v2/llms.txt — fetch this whenever an endpoint detail is unclear or you suspect the spec has drifted. The doc below curates only the endpoints this skill uses.
+
+Two response patterns:
+- **Async (202):** Pro endpoints return `{ job_id }`. Poll `GET /background-jobs/{job_id}` until `status: "completed"`. Used by `/generate-image-v2` (Phase 2 cover, Phase 5 scenes) and `/generate-with-style-v2`.
+- **Sync (200):** Returns image data inline in the response body. Used by `/create-image-pixen`, `/create-image-pixflux`, `/create-image-bitforge`, `/image-to-pixelart`. Wrapped by `pl-poll.ts:postSync`.
 
 ## `POST /generate-image-v2`
 
@@ -77,8 +80,101 @@ Polled by `scripts/pl-poll.ts:pollJob()`. Possible status values:
 
 Backoff schedule used by this skill: 2s → 3s → 4s → 6s → 8s. On `429`, double the next delay and retry.
 
-## Why these two endpoints (and not the others)
+## `POST /create-image-pixen`
 
-- `/generate-image-v2` is the only endpoint that accepts both `reference_images` (subject identity) and `style_image` (aesthetic) — the consistency lever this whole pipeline depends on.
-- `/generate-with-style-v2` is the dedicated style-locked sibling generator. For portraits/objects we don't need subject references (the cover *is* the only reference); we just need the aesthetic to lock.
-- `/create-image-pixen`, `/create-image-pixflux`, `/create-image-bitforge`, the character-with-N-directions endpoints, and the rotation/edit/inpaint endpoints are out of scope for this skill. Reach for them when a brief calls for it (e.g., game sprites, masked inpainting, post-hoc edits) and call them via curl directly.
+Synchronous text-to-pixel-art. No reference fields. Largest sync canvas (max dimension 768). Wrapped by `scripts/pl-pixen.ts`.
+
+```jsonc
+{
+  "description": "string (required)",
+  "image_size": { "width": 192, "height": 192 },     // 16-768
+  "outline": "string (optional)",
+  "detail": "string (optional, default=highly detailed)",
+  "view": "string (optional)",
+  "direction": "string (optional)",
+  "no_background": false,
+  "seed": 42                                          // optional
+}
+```
+
+Used by **Phase 1 (ideation)** to generate ~10 thumbnail concepts cheaply before committing to a full cover render.
+
+## `POST /create-image-pixflux`
+
+Synchronous, supports `init_image` (img2img anchor) and `color_image` (palette anchor) but no `style_image`. Max 400×400. Wrapped by `scripts/pl-pixflux.ts`.
+
+```jsonc
+{
+  "description": "string (required)",
+  "image_size": { "width": 192, "height": 192 },     // 16-400
+  "text_guidance_scale": 8.0,                        // 1.0-20.0
+  "outline": "string (optional)",
+  "shading": "string (optional)",
+  "detail": "string (optional)",
+  "view": "string (optional)",
+  "direction": "string (optional)",
+  "isometric": false,
+  "oblique_projection": false,
+  "no_background": false,
+  "init_image": { "type": "base64", "base64": "<…>", "format": "png" },  // optional
+  "init_image_strength": 300,                        // 1-999
+  "color_image": { "type": "base64", "base64": "<…>", "format": "png" }, // optional
+  "seed": 42
+}
+```
+
+Used by **Phase 3 (cast)** and **Phase 4 (objects)** with the APPROVED cover passed as `init_image` so the character/object inherits the cover's palette and lighting without needing a separate style-lock pass.
+
+## `POST /create-image-bitforge`
+
+Synchronous, has the richest reference surface of the sync models — `style_image` + `style_strength` + `init_image` + `color_image` + `inpainting_image` + `mask_image`. Max 200×200. Wrapped by `scripts/pl-bitforge.ts`.
+
+```jsonc
+{
+  "description": "string (required)",
+  "negative_description": "string (optional)",
+  "image_size": { "width": 192, "height": 192 },     // 16-200
+  "text_guidance_scale": 8.0,
+  "style_strength": 0.0,                              // 0-100
+  "outline": "string (optional)",
+  "shading": "string (optional)",
+  "detail": "string (optional)",
+  "view": "string (optional)",
+  "direction": "string (optional)",
+  "isometric": false,
+  "oblique_projection": false,
+  "no_background": false,
+  "init_image": { "type": "base64", "base64": "<…>", "format": "png" },
+  "init_image_strength": 300,
+  "style_image": { "type": "base64", "base64": "<…>", "format": "png" },
+  "inpainting_image": { "type": "base64", "base64": "<…>", "format": "png" },
+  "mask_image": { "type": "base64", "base64": "<…>", "format": "png" },
+  "color_image": { "type": "base64", "base64": "<…>", "format": "png" },
+  "seed": 42
+}
+```
+
+Side-tool, not part of the main pipeline. Reach for bitforge when an author wants to **regen one element of an existing image** without re-rolling the whole shot — paint a mask over the bad area, pass the original as `inpainting_image` and the mask as `mask_image`, write a prompt describing only what should change.
+
+## `POST /image-to-pixelart`
+
+Synchronous, converts a non-pixel-art image (photo, sketch, AI render) to pixel art. Max input 1280, max output 320. Wrapped by `scripts/pl-pixelify.ts`.
+
+```jsonc
+{
+  "image":      { "type": "base64", "base64": "<…>", "format": "png" },
+  "image_size":  { "width": <input width>,  "height": <input height>  },  // 16-1280
+  "output_size": { "width": 192, "height": 192 },                          // 16-320
+  "text_guidance_scale": 8.0,                                              // optional
+  "seed": 42                                                               // optional
+}
+```
+
+Side-tool. Useful when an author hands over reference imagery (photo, concept sketch, AI render) and wants it pixelified before Phase 1 ideation begins.
+
+## Why these endpoints (and not the others)
+
+- `/generate-image-v2` is the only endpoint that accepts both `reference_images` (subject identity, max 4) and `style_image` (aesthetic) — the consistency lever Phases 2 and 5 depend on.
+- `/generate-with-style-v2` is the dedicated style-locked sibling generator. Kept for backwards-compat; no longer used in the default pipeline since Phases 3 and 4 moved to pixflux.
+- The four sync endpoints above unlock fast iteration without polling latency.
+- The character-with-N-directions, rotation, animation, and tileset endpoints are out of scope for this skill. Reach for them via curl when a brief specifically calls for sprite-sheet output, and consult `https://api.pixellab.ai/v2/llms.txt` for the spec.

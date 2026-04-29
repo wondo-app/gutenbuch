@@ -1,6 +1,6 @@
 ---
-name: wondo-gamebook
-description: Walk a Wondo author through eight hard editorial gates and produce a publishable Ink gamebook file. Use whenever the user wants to write, draft, structure, or compile a Wondo gamebook, design interactive fiction for the Wondo platform, optimize for Wondo's Story Card and Insights analytics, convert their own fiction to Ink for Wondo, or adapt a public-domain work into Wondo Ink. Trigger on phrases like "Wondo story," "gamebook in Ink," "interactive fiction for Wondo," "convert my novel to Ink for Wondo," "adapt a public-domain work for Wondo," or any pairing of Ink authoring with Wondo's editorial expectations. Even if the user just says "help me write an interactive story" while working in a Wondo context, prefer this skill over interactive-fiction or game-facilitator — those are diagnostic and facilitative, this is constructive and Wondo-specific.
+name: wondo-interactive-fiction
+description: Walk a Wondo author through eight hard editorial gates and produce a publishable Ink gamebook file. Use whenever the user wants to write, draft, structure, or compile a Wondo gamebook, design interactive fiction for the Wondo platform, optimize for Wondo's Story Card and Insights analytics, convert their own fiction to Ink for Wondo, or adapt a public-domain work into Wondo Ink. Trigger on phrases like "Wondo story," "gamebook in Ink," "interactive fiction for Wondo," "convert my novel to Ink for Wondo," "adapt a public-domain work for Wondo," or any pairing of Ink authoring with Wondo's editorial expectations. Even if the user just says "help me write an interactive story" while working in a Wondo context, prefer this skill — it is constructive and Wondo-specific.
 license: MIT
 metadata:
   type: constructive
@@ -399,33 +399,80 @@ LIST ...
 
 ## Verifying the File Compiles and Plays
 
-Producing the file is not the last step. A file with a typo'd knot name, divert into nowhere, or logical infinite loop can pass every authorial gate and still be unplayable. Wondo's runtime will reject it; the author will see the failure at publish.
+Producing the file is not the last step. A file with a typo'd knot name, divert into nowhere, logical infinite loop, or an ending no run reaches can pass every authorial gate and still be unplayable. Wondo's runtime will reject some of those; Wondo's Insights simulator will flag the rest.
 
-**Run `scripts/verify_ink.sh {path}` after writing the file.** (`chmod +x scripts/verify_ink.sh` once after install if needed.) The script:
+**Run `.agents/skills/wondo-interactive-fiction/scripts/verify-ink.ts {path}` after writing the file.** It executes four phases in order:
 
-1. **Compiles** with `inkjs-compiler` — the same compiler Wondo's runtime uses. Catches syntax errors, undefined diverts, malformed conditionals, missing `END`s.
-2. **Smoke-runs** the compiled JSON through inkjs's `Story` runtime — a deterministic walk taking choices in order with a 5000-step cap. Catches files that compile but cycle forever.
+1. **Static structural checks** — regex over the source, before compile. Catches dangling diverts, orphan knots, tilde directives mid-line, missing Gate 3 ending block.
+2. **Compile** — `inkjs.Compiler` programmatically (same compiler Wondo's runtime uses). Catches syntax errors, undefined diverts, malformed conditionals.
+3. **Smoke walk** — one fixed-seed random walk with a 5000-step cap. Catches files that compile but cycle forever.
+4. **Distribution** — 400 random walks (default; configurable with `--runs`). Counts which `END_*` knot each walk terminated at, compared against the targets parsed from `// Endings (locked at Gate 3):`. Same probe Wondo's Insights simulator runs at publish, so a passing local run predicts a clean publish.
 
-The script auto-installs `inkjs` into `~/.cache/wondo-gamebook/` on first run (about 30 MB, persists across runs). Requires Node.js.
+Run it directly with `node`:
+
+```
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-interactive-fiction/scripts/verify-ink.ts stories/{slug}/{slug}.ink
+```
+
+The script auto-installs `inkjs` into `~/.cache/wondo-gamebook/` on first run (about 30 MB, persists across runs). Requires Node.js 22+ (24 recommended).
 
 **Exit codes:**
-- `0` — compiled and reached END. Report step count and prose-word count.
-- `1` — compile failed or runtime errored. Read the diagnostic, fix the Ink, retry. Don't present the file until exit 0.
-- `64`, `66`, `69`, or `70` — invocation problem (missing arg, file, Node, or inkjs cache).
+- `0` — all gating phases passed. Distribution table printed.
+- `1` — compile failed, runtime errored, or static phase found a structural error (dangling divert, etc.). Read the diagnostic, fix the Ink, retry. Don't present the file until exit 0.
+- `2` — compiled and walked OK, but distribution rubric failed: a declared `END_*` was never reached, or its share is below 1% / above 60% on N≥100 runs.
+- `64`, `66`, `69`, or `70` — invocation problem (bad flag, missing file, npm bootstrap failure, inkjs version mismatch).
 
 **Common failures:**
 
 | Diagnostic | Cause | Fix |
 |---|---|---|
-| `Divert target not found: -> X` | Typo'd knot name, or referenced a knot not yet written | Rename or add the missing stub |
-| `Knot already declared` | Two knots same name | Rename one |
-| `SMOKE-RUN INFINITE LOOP` | Divert chain returns to itself without progress | Add a state mutation or choice in the cycle |
-| `WARNING: VAR has not been declared` | Variable used in prose/condition without declaration | Add `VAR` at Gate 4/5/6 |
+| `Dangling divert: -> X` | Typo'd knot name, or referenced a knot not yet written | Rename or add the missing stub |
+| `COMPILE FAILED` | Syntax error inkjs caught | Read the inkjs message; fix the ink |
+| `__max-steps` in smoke phase | Divert chain returns to itself without progress | Add a state mutation or choice in the cycle |
+| Ending below 1% / above 60% | Path biases all-or-nothing | Add or remove choice routes to that ending |
+| `declared ending never reached` | `END_x` named in Gate 3 block but no chain reaches it | Audit the divert chain feeding it |
+| Named knot reached <5% | Buried scene; warn-only by default | Audit whether this knot belongs; if it does, raise its reach via choice routing. Pass `--strict-reach` to escalate to gating. |
 | Tilde directive prints as prose | `~ has_key = true` written inline with text | Move the tilde to its own line |
 
-**If the script can't run** (no Node, no internet for one-time install, restricted environment), don't skip silently. Tell the author: "The file is unverified — paste it into the Wondo authoring editor or a local Inky session and check the validator before publish." Producing an unverified file while claiming it's verified is the failure mode this section exists to prevent.
+Useful flags:
+- `--runs <n>` — number of distribution walks (default 400). At `<100`, distribution thresholds are suppressed (informational only).
+- `--seed <n>` — master seed; re-running with the same seed reproduces the same walks.
+- `--seed-run <n>` — replay a single walk number from the master seed (debug aid).
+- `--strict-reach` — gate on named knots reached <5% of runs.
+- `--no-distribution` — skip phase 4 (drop-in equivalent of the legacy bash behaviour).
+- `--quiet` — single-line PASS/FAIL on stdout.
+- `--json` — full report on stdout as JSON.
 
-The smoke-run is necessary but not sufficient. It walks one deterministic path. Wondo's Insights simulator at publish time runs 100 random walks and is the real reachability test. The smoke-run is the cheap pre-flight.
+**If the script can't run** (no Node, no internet for the one-time install, restricted environment), don't skip silently. Tell the author: "The file is unverified — paste it into the Wondo authoring editor or a local Inky session and check the validator before publish." Producing an unverified file while claiming it's verified is the failure mode this section exists to prevent.
+
+Full flag reference, exit codes, tunable thresholds, and extension points: `references/verify-ink.md`.
+
+---
+
+## Phase 9 — Asset brief
+
+Runs in parallel with `verify-ink.ts` after all eight gates pass and the `.ink` is assembled. Produces `stories/{slug}/brief.md`, the asset-design contract that the `wondo-pixellab-assets` skill consumes.
+
+You are the only place in the toolchain that has all the structured information the brief needs: the cast comment block (Gate 2), the endings comment block (Gate 3), the assembled knot tree (post-assembly), and the prose body (the source of "what scenes are worth illustrating"). Drafting it here means the pixellab skill never has to re-derive this information.
+
+**Inputs**
+- The just-assembled `stories/{slug}/{slug}.ink` file.
+- The template at `.agents/skills/wondo-pixellab-assets/references/brief-template.md`. Treat it as authoritative — every section header and field comes from there.
+
+**Walk the file and populate the template fields:**
+
+1. **Header** — title, slug, source path (`stories/{slug}/{slug}.ink`), generation date.
+2. **Cast** — parse the `// Cast (locked at Gate 2):` comment block. Each character becomes a row with name, motivation, screen-time. Leave the per-character pixellab prompt blank for the author to write later.
+3. **Endings** — parse the `// Endings (locked at Gate 3):` comment block. Endings don't get illustrations directly, but they appear in the brief as context.
+4. **Scenes** — walk knot bodies. For each knot whose body contains a clearly-illustratable beat (a location change, a gesture, a tagged `# SCENE: <n>` line), emit a scene row. Default cap: ~10 scenes; the author can prune. Each scene row carries the knot name and a one-line beat description; leave the pixellab prompt blank.
+5. **Objects** — leave as a placeholder section. Objects don't have a structured comment block — the author fills these in based on what they know is plot-critical (Gate 6 items partially overlap, but pixellab's "objects" are visual props, not Gate 6 inventory tokens, so don't auto-populate from items).
+6. **Ideation prompt / cover prompt / style suffix / palette** — leave blank with comments explaining what goes there. The author tunes these before invoking pixellab.
+
+**Failure handling.** If the brief template can't be read, surface a one-line warning ("brief template missing — pixellab skill won't run cleanly until you grab a copy") but don't block `verify-ink.ts`'s pass/fail signal. The brief is a downstream input, not a publish blocker.
+
+**Done message.** After both `verify-ink.ts` exit 0 AND `brief.md` is written, tell the author:
+
+> Story compiled and walked clean. Brief drafted at `stories/{slug}/brief.md`. Run `wondo-pixellab-assets` if you want illustrations, or ship the `.ink` to Wondo as-is.
 
 ---
 
@@ -470,17 +517,28 @@ Recorded overrides are honored. Unjustified overrides aren't — push back with 
 
 ## Integration with Other Skills
 
-| Skill | When to hand off |
+| Skill or reference | When to hand off |
 |---|---|
-| **interactive-fiction** | Author has a finished Ink draft with structural problems and wants diagnosis rather than authoring. The IF1–IF7 state taxonomy applies. |
-| **game-facilitator** | Never directly relevant — that's for live tabletop, not authored gamebooks. |
-| **brd-jtbd**, **prd** | Author is also the platform owner and wants to spec Wondo features. |
+| **wondo-pixellab-assets** | Author has a finished `.ink` file and wants illustrations (cover, character portraits, scene banners). That skill drafts an asset brief by walking the same Ink file this skill produces. |
+| **`references/interactive-fiction.md`** (local) | Author has a finished Ink draft with structural problems and wants diagnosis rather than authoring. The IF1–IF7 state taxonomy in that doc applies. Read it; don't invoke it as a separate skill. |
 
 ---
 
 ## Output Persistence
 
-Save the `.ink` file under the author's project. Default: `{project-root}/stories/{slug}.ink`. If no project structure exists, ask first. The eight gate artifacts are embedded as comments in the Ink file — that's the persistent record.
+Every story gets its own directory at `{project-root}/stories/{slug}/`. The slug is the author's working title from Gate 0 (lowercase, hyphenated, no spaces — e.g. `pellucidar`, not `pg20121`). If the working title isn't slug-safe, ask the author for a short slug and use the working title as a header instead.
+
+Inside `stories/{slug}/`:
+
+```
+stories/{slug}/
+├── {slug}.ink          # this skill's primary output (verify-ink.ts compiles this)
+├── {slug}.txt          # raw source text for public-domain adaptations (optional)
+├── brief.md            # asset brief produced at Phase 9 (input to wondo-pixellab-assets)
+└── assets/             # gitignored; pixellab generates illustrations here
+```
+
+If no project structure exists, ask first. The eight gate artifacts are embedded as comments in the Ink file — that's the persistent record.
 
 ---
 
@@ -502,7 +560,7 @@ Save the `.ink` file under the author's project. Default: `{project-root}/storie
 
 **Gate 3:** 3–7 endings, values-named, percentages summing to 100, one sentence stance each.
 
-*(... and so through all eight gates, then the Ink file, then `scripts/verify_ink.sh`.)*
+*(... and so through all eight gates, then the Ink file, then `.agents/skills/wondo-interactive-fiction/scripts/verify-ink.ts`.)*
 
 ---
 
@@ -510,7 +568,7 @@ Save the `.ink` file under the author's project. Default: `{project-root}/storie
 
 - Produce Ink before all eight gates are resolved.
 - Skip a gate at the author's request without an explicit override reason recorded as a comment.
-- Present the Ink file as done before `verify_ink.sh` exits 0, or — when the script can't run — without explicitly telling the author the file is unverified.
+- Present the Ink file as done before `verify-ink.ts` exits 0, or — when the script can't run — without explicitly telling the author the file is unverified.
 - Write prose for the author. Produce structure (knot stubs, divert skeletons, variable declarations); the author writes prose.
 - Apply the gates to non-Wondo Ink work. Thresholds are calibrated to Wondo's Insights rubric.
 - Pretend the gates don't have costs. They take time. Acknowledge that. Run them anyway.
@@ -521,4 +579,4 @@ Save the `.ink` file under the author's project. Default: `{project-root}/storie
 
 Wondo's Story Card and Insights aren't grading criteria invented after the fact — they describe what a healthy Wondo gamebook looks like from the outside. The eight gates describe what one looks like from the inside. Two views of the same artifact.
 
-A gamebook passing the gates and `verify_ink.sh` publishes well, simulates well, reads well. One that skips either ships with skew warnings or compiler errors and demands a rewrite.
+A gamebook passing the gates and `verify-ink.ts` publishes well, simulates well, reads well. One that skips either ships with skew warnings or compiler errors and demands a rewrite.
