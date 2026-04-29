@@ -39,15 +39,22 @@ async function ensureRefAtSize(
 function usage(): never {
   console.error(`Usage:
   pl-image.ts --prompt "<text>" --out <path.png>
-              [--width 512] [--height 512]
+              [--width 176] [--height 176]
               [--style <path.png>]
-              [--refs <path1.png,path2.png,...>]   (max 4)
+              (repeat) --ref <path.png> --ref-use "<usage description>"
               [--seed <n>]
               [--no-bg]
 
-Wraps POST /generate-image-v2. Used for the COVER (Phase 1) and SCENES (Phase 4).
-- Phase 1: omit --style and --refs.
-- Phase 4: pass --style <APPROVED cover> and --refs <character/object portraits>.
+Wraps POST /generate-image-v2. Used for the COVER (Phase 4) and SCENES (Phase 5).
+Each --ref must be paired with a --ref-use; the parser pairs them by index, so
+the order of --ref and --ref-use flags must match. Hard-capped at 4 refs (API limit).
+
+Each --ref-use describes how that reference should be used, e.g.:
+  --ref ray.png       --ref-use "use this person as Ray"
+  --ref study.png     --ref-use "use this place as the setting"
+  --ref pipe.png      --ref-use "use this object"
+  --ref cover.png     --ref-use "use this color palette"
+
 Reads PIXELLAB_TOKEN from env.`);
   process.exit(2);
 }
@@ -56,15 +63,30 @@ async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) usage();
 
-  const flags = parseFlags(argv, ["no-bg"]);
+  const flags = parseFlags(argv, ["no-bg"], ["ref", "ref-use"]);
   const prompt = requireFlag(flags, "prompt");
   const out = requireFlag(flags, "out");
-  const width = parseInt(flags.string.width ?? "512", 10);
-  const height = parseInt(flags.string.height ?? "512", 10);
+  const width = parseInt(flags.string.width ?? "176", 10);
+  const height = parseInt(flags.string.height ?? "176", 10);
   const stylePath = flags.string.style;
-  const refsArg = flags.string.refs;
+  const refPaths = flags.repeated.ref;
+  const refUses = flags.repeated["ref-use"];
   const seedStr = flags.string.seed;
   const noBg = flags.bool["no-bg"];
+
+  if (refPaths.length !== refUses.length) {
+    console.error(
+      `--ref count (${refPaths.length}) does not match --ref-use count (${refUses.length}). ` +
+        `Each --ref must be paired with a --ref-use describing how to use it.`,
+    );
+    process.exit(2);
+  }
+  if (refPaths.length > 4) {
+    console.error(
+      `Got ${refPaths.length} refs but the API caps at 4. Drop the least-important.`,
+    );
+    process.exit(2);
+  }
 
   const token = requireToken();
 
@@ -88,32 +110,27 @@ async function main() {
     };
   }
 
-  if (refsArg) {
-    const paths = refsArg
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (paths.length > 4) {
-      console.error(
-        `--refs has ${paths.length} paths but the API caps at 4. Drop the least-important.`,
-      );
-      process.exit(2);
+  if (refPaths.length > 0) {
+    const refImages: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < refPaths.length; i++) {
+      const scaled = await ensureRefAtSize(refPaths[i], width, height);
+      refImages.push({
+        image: { base64: imgToB64(scaled) },
+        size: readPngSize(scaled),
+        usage_description: refUses[i],
+      });
     }
-    const usePaths: string[] = [];
-    for (const p of paths) {
-      usePaths.push(await ensureRefAtSize(p, width, height));
-    }
-    body.reference_images = usePaths.map((p) => ({
-      image: { base64: imgToB64(p) },
-      size: readPngSize(p),
-    }));
+    body.reference_images = refImages;
   }
 
   console.error(
     `[pl-image] POST /generate-image-v2  size=${width}x${height} ` +
-      `style=${stylePath ? "yes" : "no"} refs=${refsArg ? refsArg.split(",").length : 0} ` +
+      `style=${stylePath ? "yes" : "no"} refs=${refPaths.length} ` +
       `no_bg=${noBg ? "yes" : "no"} seed=${seedStr ?? "auto"}`,
   );
+  for (let i = 0; i < refPaths.length; i++) {
+    console.error(`  ref ${i + 1}: ${refPaths[i]}  — ${refUses[i]}`);
+  }
 
   const { jobId } = await postJob("/generate-image-v2", body, token);
   console.error(`[pl-image] job_id=${jobId}; polling…`);

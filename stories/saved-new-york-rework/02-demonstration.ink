@@ -3,40 +3,40 @@
 // =====================================================
 
 === demonstration_arrival ===
-Lisbeth and Baldy were nonplussed, naturally. And skeptical. But Porky, more gloomy than ever at all this discussion, waved away their doubts.
+After describing Porky's plight, Lisbeth and Baldy were nonplussed. Even skeptical. But Porky, more gloomy than ever at all this discussion, waved away their doubts.
 
 "Then let me show you," he declared. "Pick anybody out there on the street. Anybody at all." He shoved his armchair back up to the open window, with the three of us standing around behind him.
 
-"Will it — will it hurt him?" Lisbeth asked.
+"Will it hurt him?" Lisbeth asked.
 
-"It won't hurt Porky," I said. "But it might very easily hurt the other fellow." I gripped Porky by the shoulder. "Listen — you've evidently had a lot of luck so far. You haven't killed anybody, have you?"
+"It won't hurt Porky," I said. "But it might very easily hurt the other fellow." I gripped Porky by the shoulder. "Listen, you've evidently had a lot of luck so far. You haven't killed anybody, have you?"
 
-He looked horrified. "Killed anybody? Oh my heavens no! How could I —"
+He looked horrified. "Killed anybody? Oh my heavens no! How could I…"
 
-"Suppose while you have possession of some stranger, you got killed?" I suggested. "Or committed suicide, for instance? It only takes you a second to *withdraw*, as you put it. So you'd be sitting here in your chair, but the other fellow would be dead."
+"Suppose while you have possession of some stranger, you got killed? Or committed suicide, for instance? It only takes you a second to *withdraw*, as you put it. So you'd be sitting here in your chair, but the other fellow would be dead or framed for murder."
 
-"Don't quibble," Baldy said. "Let's see him do it. That's the important part." Baldy has a good imagination, which is why his cartoons are so successful. "If he can do a thing like that, it's a *gift*," Baldy added with mounting enthusiasm. "Why, we can capitalize on it in a thousand ways — maybe make a fortune —"
+"Don't quibble," Baldy said. "Let's see him do it. That's the important part." Baldy has a good imagination, which is why his cartoons are so successful. "If he can do a thing like that, it's a *gift*," Baldy added with mounting enthusiasm. "Why, we can capitalize on it in a thousand ways — maybe make a fortune."
 
-"I just want to get rid of it," Porky said. "But here goes."
+"I just want to be rid of it," Porky said. "But here goes."
 ~ baldy_excitement = baldy_excitement + 1
 -> old_woman_demo
 
 === old_woman_demo ===
-Well, he showed us all right.
+He showed us all right.
 
 A meek-looking old woman with a shawl over her head and an umbrella under her arm happened to come along, and at the busy intersection just under my window she stood looking confused, as though afraid of the traffic.
 
 "Try her," Baldy suggested. "She looks like a weak character."
 
-"Doesn't seem to make any difference," Porky said. "All right, she'll do."
+"Doesn't seem to make any difference. But she'll do."
 
-We were tense, all of us. I was trying to watch the old woman and Porky simultaneously. She stood on the corner, nervously waiting for the light to change, then seemed afraid to start across because cars were turning from the side street. Here in the chair, Porky just took a good, intense look at his victim. I saw a sort of predatory look jump into his pale blue eyes. And then he sat back in his chair with a hand up to his forehead.
+We were tense, all of us. I was trying to watch the old woman and Porky simultaneously. She stood on the corner, nervously waiting for the light to change, then seemed afraid to start across because cars were turning from the side street. Here in the chair, Porky just took a good long intense look at his victim. I saw a sort of predatory look jump into his pale blue eyes. And then he sat back in his chair with a hand up to his forehead.
 
-Then it happened. Down on the corner the old woman seemed to start; for a second she looked dazed; she gave a twitch. Here in the chair was a thud — Porky's head falling back inert against the upholstery, and there he lay, motionless, in a trance. Lisbeth gave a frightened little gasp.
+Then it happened. Down on the corner the old woman seemed to start; for a second she looked dazed; she gave a twitch. Here in the chair was a thud. Porky's head falling back inert against the upholstery, and there he lay, motionless, in a trance it seemed. Lisbeth gave a frightened little gasp.
 
-"He's all right," I murmured.
+"I'm sure he's all right," I murmured.
 
-"Shut up," Baldy admonished. "Look — oh migosh, look at the old woman!"
+"Shut up," Baldy admonished. "Look there. Oh migosh, look at the old woman!"
 
 She was something to look at. The light had changed back, but that didn't stop her. With imperious, if shaking, steps, she strode out from the curb, holding up a hand to stop the traffic. By some miracle nothing hit her. And at the exact center of the intersection she stopped.
 
@@ -46,7 +46,7 @@ That was undoubtedly her general idea. She had the closed umbrella gripped in he
 
 Then the policemen reached her, gripped her. The old woman stiffened and went limp in their arms; and here in the chair Porky gave a twitch, his head coming up, his eyes open staring at me with a nervous smile.
 
-"Well, there you are," he said.
+"Well, there you have it," he said.
 ~ porky_hosts += old_woman
 ~ baldy_excitement = baldy_excitement + 1
 -> after_demo
