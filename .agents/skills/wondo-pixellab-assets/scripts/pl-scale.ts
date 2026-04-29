@@ -1,25 +1,32 @@
 #!/usr/bin/env -S node --no-warnings=ExperimentalWarning
 import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import sharp from "sharp";
-import { parseFlags, readPngSize, requireFlag } from "./pl-poll.ts";
+import { parseFlags, readPngSize, requireFlag, requireSharp } from "./pl-poll.ts";
+
+type SharpFn = (input: string) => {
+  resize: (
+    w: number,
+    h: number,
+    opts: { kernel: string; fit?: string },
+  ) => { png: () => { toFile: (p: string) => Promise<unknown> } };
+};
 
 function usage(): never {
   console.error(`Usage:
   pl-scale.ts --slug <story-slug> [--factor 3] [--input-dir <path>] [--force]
 
-Walks .context/pixellab/<slug>/{01-cover,02-cast,03-objects,04-scenes}/*.png
-and writes nearest-neighbor upscaled copies to
-.context/pixellab/<slug>/05-3x/<same-subdir>/<same-filename>.png.
+Walks stories/<slug>/assets/{01-cover,02-cast,03-objects,04-scenes}/*.png
+(plus 00-ideation if present) and writes nearest-neighbor upscaled copies to
+stories/<slug>/assets/05-3x/<same-subdir>/<same-filename>.png.
 
 Nearest-neighbor: each input pixel becomes a factor x factor block of the same
 color. No anti-aliasing, no resampling, no artifacts. Pixel art stays crisp.
 
 Flags:
   --slug        Story slug. The script reads from
-                .context/pixellab/<slug>/ unless --input-dir overrides.
+                stories/<slug>/assets/ unless --input-dir overrides.
   --factor      Integer scale factor. Default 3.
-  --input-dir   Override input directory (defaults to .context/pixellab/<slug>).
+  --input-dir   Override input directory (defaults to stories/<slug>/assets).
                 Output always goes to <input-dir>/05-3x/.
   --force       Overwrite files in 05-3x/ that already exist.
 `);
@@ -40,12 +47,14 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   const force = flags.bool["force"];
-  const inputDir = resolve(flags.string["input-dir"] ?? `.context/pixellab/${slug}`);
+  const inputDir = resolve(flags.string["input-dir"] ?? `stories/${slug}/assets`);
 
   if (!existsSync(inputDir)) {
     console.error(`Input directory not found: ${inputDir}`);
     process.exit(2);
   }
+
+  const sharp = requireSharp() as SharpFn;
 
   const outRoot = join(inputDir, "05-3x");
 

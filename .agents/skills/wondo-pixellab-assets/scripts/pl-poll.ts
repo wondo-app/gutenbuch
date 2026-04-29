@@ -1,6 +1,48 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export const API_BASE = "https://api.pixellab.ai/v2";
+
+// requireSharp loads sharp from a per-skill cache, installing it on first run.
+// Mirrors verify-ink.ts's inkjs bootstrap so neither skill needs a project-level
+// package.json. Cache dir is overridable via WONDO_PIXELLAB_CACHE; defaults to
+// ~/.cache/wondo-pixellab/. Sharp ships platform-specific prebuilts via npm
+// install, so the install is large (~80 MB) but one-time.
+let _sharp: unknown = null;
+export function requireSharp(): unknown {
+  if (_sharp) return _sharp;
+  const cacheDir =
+    process.env.WONDO_PIXELLAB_CACHE ?? join(homedir(), ".cache", "wondo-pixellab");
+  if (!existsSync(cacheDir)) mkdirSync(cacheDir, { recursive: true });
+
+  const sharpDir = join(cacheDir, "node_modules", "sharp");
+  if (!existsSync(sharpDir)) {
+    console.error(`[pl-poll] installing sharp into ${cacheDir} (one-time, ~80 MB)`);
+    const pkgJson = join(cacheDir, "package.json");
+    if (!existsSync(pkgJson)) {
+      try {
+        execSync("npm init -y", { cwd: cacheDir, stdio: "ignore" });
+      } catch {
+        throw new Error(`pl-poll: npm init failed in ${cacheDir}`);
+      }
+    }
+    try {
+      execSync("npm install --silent sharp", { cwd: cacheDir, stdio: "inherit" });
+    } catch {
+      throw new Error(`pl-poll: npm install sharp failed in ${cacheDir}`);
+    }
+  }
+
+  const requireFromCache = createRequire(join(cacheDir, "package.json"));
+  const mod = requireFromCache("sharp") as unknown;
+  // sharp's CommonJS export is the function itself; ESM-interop wrappers may
+  // expose it under .default. Accept either.
+  _sharp = (mod as { default?: unknown }).default ?? mod;
+  return _sharp;
+}
 
 export function requireToken(): string {
   const token = process.env.PIXELLAB_TOKEN;
@@ -45,7 +87,13 @@ export async function scalePngToFile(
   targetW: number,
   targetH: number,
 ): Promise<void> {
-  const sharp = (await import("sharp")).default;
+  const sharp = requireSharp() as (input: string) => {
+    resize: (
+      w: number,
+      h: number,
+      opts: { kernel: string; fit: string },
+    ) => { png: () => { toFile: (p: string) => Promise<unknown> } };
+  };
   await sharp(srcPath)
     .resize(targetW, targetH, { kernel: "nearest", fit: "fill" })
     .png()
@@ -114,6 +162,29 @@ export async function postJob(
   const jobId = json.job_id ?? json.jobId ?? json.background_job_id;
   if (!jobId) throw new Error(`No job_id in response: ${JSON.stringify(json)}`);
   return { jobId };
+}
+
+// postSync: POSTs to a synchronous endpoint that returns 200 with image data
+// inline (no job_id, no polling). Used by /create-image-pixflux,
+// /create-image-pixen, /create-image-bitforge, /image-to-pixelart.
+export async function postSync(
+  endpoint: string,
+  body: unknown,
+  token: string,
+): Promise<unknown> {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: "POST",
+    headers: bearerHeaders(token),
+    body: JSON.stringify(body),
+  });
+  if (res.status === 429) {
+    throw new Error("429 rate-limited at submit; reduce concurrency to 3-5 jobs.");
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST ${endpoint} failed (${res.status}): ${text}`);
+  }
+  return res.json();
 }
 
 export function extractFirstImage(jobResult: unknown): string {

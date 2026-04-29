@@ -1,184 +1,221 @@
 ---
-name: pixellab-story-assets
-description: Generate story-consistent pixel art for a Wondo story via the PixelLab API (not the MCP). Drafts an asset brief from a story slug, then runs a five-phase generation pipeline — cover → cast → objects → scenes → 3x scale — with reference_images carrying character identity across scenes. Use when the user wants story illustrations, character portraits, scene banners, or any task involving "PixelLab," "asset brief," "pixel art for a story," "character consistency across scenes," or "illustration set."
+name: wondo-pixellab-assets
+description: Generate story-consistent pixel art for a Wondo story via the PixelLab API (not the MCP). Drafts an asset brief from a story slug, then runs a seven-phase pipeline — ideation (pixen) → cover (pl-image) → cast (pixflux) → objects (pixflux) → scenes (pl-image) → 3× scale — with reference images carrying style and subject identity forward. Use when the user wants story illustrations, character portraits, scene banners, or any task involving "PixelLab," "asset brief," "pixel art for a story," "character consistency across scenes," or "illustration set."
 ---
 
 # PixelLab Story Assets
 
-Generates a complete illustration set for a story so characters and style stay consistent across every scene. Uses the direct PixelLab API — the MCP can't pass `reference_images` or `style_image`, so MCP-generated portraits and scenes drift visually. Each phase here feeds the previous phase's approved output forward as a style or subject reference.
+Generates a complete illustration set for a story so characters and style stay consistent across every scene. Uses the direct PixelLab API — the MCP can't pass `reference_images` or `style_image` / `init_image`, so MCP-generated portraits and scenes drift visually. Each phase here feeds the previous phase's approved output forward.
 
 The shape of every run:
 
 ```
-slug → brief draft → 2-3 cover options → APPROVED cover
-                                          → cast portraits   (style_image = cover)
-                                          → object renders   (style_image = cover)
-                                          → scenes           (style_image = cover, reference_images = cast/objects)
-                                          → 3x scale          (nearest-neighbor, every PNG, no API calls)
+slug → brief draft
+       → Phase 1: pixen × ~10 thumbnail concepts (192×192)
+                                          → user picks 2
+       → Phase 2: pl-image × 2 cover options (192×344, ref=picked thumbnail)
+                                          → user APPROVES one
+       → Phase 3: pixflux cast portraits (192×192, init=APPROVED cover)
+       → Phase 4: pixflux objects        (192×192, init=APPROVED cover)
+       → Phase 5: pl-image scenes        (192×192, style=cover, refs=cast/objects)
+       → Phase 6: 3× nearest-neighbor scale (every PNG, no API calls)
 ```
 
-Stop and ask the user to approve between each generation phase (1–4) — never burn through them unattended. Phase 5 is a deterministic local post-process; it runs unattended after Phase 4 approval.
+Stop and ask the user to approve between each generation phase (1–5) — never burn through them unattended. Phase 6 is a deterministic local post-process; it runs unattended after Phase 5 approval.
+
+**Side-tools (not part of the pipeline):**
+- `pl-bitforge.ts` — `/create-image-bitforge` for inpaint fixes ("regen the cape, leave everything else") via `--inpaint` + `--mask`. Max 200×200.
+- `pl-pixelify.ts` — `/image-to-pixelart` for converting an author-supplied photo / sketch / AI render into pixel art before Phase 1 ideation.
 
 ## Common Gotchas
 
-1. **Never exceed 4 `reference_images` per call.** Hard API limit. If a scene's brief lists more than 4, prioritize the most identity-critical (named speakers > silent presences > objects), describe the rest in prose, and tell the user which ones you dropped.
+1. **Never exceed 4 `reference_images` per call.** Hard API limit on `/generate-image-v2`. If a scene's brief lists more than 4, prioritize the most identity-critical (named speakers > silent presences > objects), describe the rest in prose, and tell the user which ones you dropped.
 
 2. **`PIXELLAB_TOKEN` must be set.** Get one at https://pixellab.ai/account and `export PIXELLAB_TOKEN=…`. The scripts hard-fail with a clear message if it's missing — don't guess and try anyway.
 
-3. **`no_background = true` for portraits and objects, never for scenes.** Phase 2/3 outputs composite into Phase 4 scenes; they need transparent backgrounds. Phase 4 scenes *are* the background. Wired into the scripts as `--no-bg`; only `pl-style.ts` invocations should pass it.
+3. **`no_background = true` for portraits and objects, never for scenes / covers / ideation.** Phase 3/4 outputs composite into Phase 5 scenes; they need transparent backgrounds. Scenes, covers, and ideation thumbnails *are* the background. Wired into the scripts as `--no-bg`; pass it on `pl-pixflux.ts` calls in Phases 3 and 4 only.
 
-4. **Pro endpoints return `202 + job_id`. Always poll.** `pl-poll.ts` handles this; never bypass it with a synchronous fetch.
+4. **Two response patterns — sync and async.** `/create-image-pixen`, `/create-image-pixflux`, `/create-image-bitforge`, `/image-to-pixelart` are synchronous (HTTP 200 with image data) and don't need polling. `/generate-image-v2` and `/generate-with-style-v2` are async (`202 + job_id`) and `pl-poll.ts:pollJob` handles them. Don't bypass the polling helpers.
 
-5. **Cap simultaneous jobs at 3–5.** The API rate-limits with 429 above that. The skill runs phases serially per asset; if you parallelize within a phase, batch in groups of 3.
+5. **Cap simultaneous jobs at 3–5.** The API rate-limits with 429 above that. Phase 1 (10 pixen calls) is the only place where parallelism matters; batch in groups of 3–5 to stay under the limit. Other phases are serial per asset.
 
-6. **Reuse `seed` to tweak; change `seed` to re-roll.** Same seed + slightly edited prompt = a refined version of the last shot. Different seed = a fresh composition. For Phase 1, use 2–3 different seeds so the user sees real options.
+6. **Reuse `seed` to tweak; change `seed` to re-roll.** Same seed + slightly edited prompt = a refined version of the last shot. Different seed = a fresh composition. For Phase 1, use 10 different seeds so the user sees real diversity; for Phase 2, use 2 different seeds for the cover options.
 
-7. **Scenes pass the COVER as `style_image`, not the character portrait.** The cover is the style anchor. Character portraits go in `reference_images` for subject identity. Mixing these up produces scenes that look like the portrait rather than the cover.
+7. **Scenes pass the COVER as `style_image`, cast/objects as `reference_images`.** The cover is the style anchor (aesthetic). Character portraits go in `reference_images` for subject identity. Mixing these up produces scenes that look like the portrait rather than the cover. `pl-image.ts` accepts both: `--style <cover>` and `--refs <a.png,b.png,…>`.
 
 8. **The skill is idempotent.** If `<##>-<slug>.png` already exists in the target directory, skip it unless the user explicitly asks for a regenerate. Resume after interruption by re-invoking with the same slug.
 
-9. **Reference dimensions cap the scene's content area.** `/generate-image-v2` constrains generated content to the scale of its `reference_images`. A 384×384 scene with 256×256 cast refs fills only ~240×240 of canvas; the rest is transparent padding (looks like a white frame). **`pl-image.ts` automatically pre-scales every ref to the scene's canvas size with nearest-neighbor**, writing the scaled copy under `.cache/` next to the original. Don't bypass this by sending refs at their native size.
+9. **Reference dimensions cap the scene's content area.** `/generate-image-v2` constrains generated content to the scale of its `reference_images`. **`pl-image.ts` automatically pre-scales every ref to the scene's canvas size with nearest-neighbor**, writing the scaled copy under `.cache/` next to the original. Don't bypass this by sending refs at their native size.
 
 10. **No legible text in scenes.** Pixel-art models render real words as garbled letterforms. Describe signage by shape, color, and ornament — never by what it says. See `references/prompt-patterns.md` for the positive-descriptor pattern.
 
-11. **Sizes are locked per phase, not per asset.** Cover 448×600, Cast 256×256, Objects 128×128, Scenes 384×384. The scripts validate post-write and hard-fail on mismatch. Edit the brief template if the canonical needs to change project-wide; don't override per call.
+11. **Sizes are locked per phase, not per asset.** Ideation 192×192, Cover 192×344, Cast 192×192, Objects 192×192, Scenes 192×192. The scripts validate post-write and hard-fail on mismatch. Edit the brief template if the canonical needs to change project-wide; don't override per call.
+
+12. **Sync model size caps differ.** pixen max dim 768, pixflux max 400×400, bitforge max 200×200, pixelify output max 320×320. The default 192×192 fits all of them. If a one-off asset needs more, use the appropriate model — not the wrong one with a too-large request.
 
 ## File structure
 
 ```
-.claude/skills/pixellab-story-assets/
+.agents/skills/wondo-pixellab-assets/
 ├── SKILL.md                  (this file)
 ├── references/
-│   ├── endpoints.md          # /generate-image-v2, /generate-with-style-v2, /background-jobs
+│   ├── endpoints.md          # request/response shapes for every endpoint this skill uses
 │   ├── prompt-patterns.md    # style suffix, no_background, seed strategy
 │   └── brief-template.md     # the markdown shape Phase 0 produces
 └── scripts/
-    ├── pl-poll.ts            # shared: pollJob, imgToB64, postJob, parseFlags
-    ├── pl-image.ts           # CLI: /generate-image-v2 (Phase 1, Phase 4)
-    ├── pl-style.ts           # CLI: /generate-with-style-v2 (Phase 2, Phase 3)
-    └── pl-scale.ts           # CLI: nearest-neighbor 3x upscale (Phase 5)
+    ├── pl-poll.ts            # shared: pollJob, postSync, imgToB64, parseFlags
+    ├── pl-pixen.ts           # CLI: /create-image-pixen   (Phase 1, sync)
+    ├── pl-image.ts           # CLI: /generate-image-v2    (Phase 2 cover, Phase 5 scenes; async)
+    ├── pl-pixflux.ts         # CLI: /create-image-pixflux (Phase 3 cast, Phase 4 objects; sync)
+    ├── pl-bitforge.ts        # CLI: /create-image-bitforge (side-tool: inpaint; sync)
+    ├── pl-pixelify.ts        # CLI: /image-to-pixelart    (side-tool: photo→pixel; sync)
+    ├── pl-style.ts           # CLI: /generate-with-style-v2 (legacy; kept for backwards-compat)
+    └── pl-scale.ts           # CLI: nearest-neighbor 3× upscale (Phase 6, local-only)
 ```
 
-Outputs land in `.context/pixellab/<slug>/` (gitignored):
+Outputs land in `stories/<slug>/assets/` (gitignored):
 
 ```
-.context/pixellab/<slug>/
+stories/<slug>/assets/
 ├── brief.md
+├── 00-ideation/
+│   ├── 00.png  01.png … 09.png       (10 pixen thumbnails)
+│   └── PICKED.txt                     (user's two picks, one filename per line)
 ├── 01-cover/
-│   ├── option-a.png  option-b.png  option-c.png
-│   └── APPROVED.png        (copy of the user's pick)
+│   ├── option-a.png  option-b.png
+│   └── APPROVED.png                   (copy of the user's pick)
 ├── 02-cast/   02-<slug>.png  03-<slug>.png  …
 ├── 03-objects/   07-<slug>.png  …
 ├── 04-scenes/   11-<slug>.png  12-<slug>.png  …
-└── 05-3x/                       (Phase 5 — mirrors the four subdirs above at 3× resolution)
-    ├── 01-cover/   …
-    ├── 02-cast/    …
-    ├── 03-objects/ …
-    └── 04-scenes/  …
+└── 05-3x/                             (Phase 6 — mirrors the five subdirs above at 3× resolution)
+    ├── 00-ideation/  …
+    ├── 01-cover/     …
+    ├── 02-cast/      …
+    ├── 03-objects/   …
+    └── 04-scenes/    …
 ```
 
 ## Inputs
 
-- **Required:** a story slug. Resolved against `seed/seed.json` chapters in Phase 0.
+- **Required:** a story slug and an existing `stories/<slug>/brief.md`. The brief is the output of the `wondo-interactive-fiction` skill's Phase 9 — that skill walks the assembled Ink file once and emits the brief, so this skill never has to re-derive cast / scenes / endings.
 
-Sizes are locked per phase (Cover 448×600, Cast 256×256, Objects 128×128, Scenes 384×384) and validated post-write. References smaller than the scene canvas are auto-prescaled by `pl-image.ts`. Genuine size changes should edit the brief template's defaults rather than override per call.
+If the user invokes the skill without a slug, ask which story. If the brief is missing, tell them to run `wondo-interactive-fiction` first.
 
-If the user invokes the skill without a slug, ask which story.
+## Phase 0 — Read the brief
 
-## Phase 0 — Draft the brief
+The brief is the contract — every prompt this skill sends comes from it. This skill is consumer-only here; it does not draft.
 
-If `.context/pixellab/<slug>/brief.md` already exists, **skip drafting**, read the existing file, and proceed to Phase 1. (User may have hand-edited it between runs — never overwrite without asking.)
+1. Look for `stories/<slug>/brief.md`. If it exists, read it and proceed to Phase 1.
+2. If it doesn't exist, tell the user:
 
-Otherwise:
+   > No brief found at `stories/<slug>/brief.md`. Run `wondo-interactive-fiction` first — its Phase 9 produces the brief from your assembled `.ink` file.
 
-1. Read `seed/seed.json`. Find the story whose slug field matches.
-2. Walk its chapters. For each chapter (plaintext Ink), parse `=== knot ===` headers and `# tag: value` lines. The wondo-development skill (`.claude/skills/wondo-development/SKILL.md`) documents this structure — load it if anything about the source format is unclear.
-3. Extract:
-   - **Characters**: 5–8 most-recurring named entities in dialogue and prose.
-   - **Objects**: 3–6 items that recur or drive plot beats.
-   - **Scenes**: knots tagged `# SCENE: <n>` plus knots whose body sets a clearly-illustratable beat.
-4. Write `.context/pixellab/<slug>/brief.md` using the template at `references/brief-template.md`. Fill the heuristics section's guidance into real prompts.
-5. Print the brief path and stop. Tell the user:
+3. Stop. Don't fabricate a brief from the Ink file directly; that work belongs upstream.
 
-   > Drafted the asset brief at `.context/pixellab/<slug>/brief.md`. Review and edit (especially the cover prompt and per-asset prompts), then say "ready" to start Phase 1.
+Once a brief exists and the user has reviewed / edited it, they give you the green light to start Phase 1.
 
-Wait for "ready" or a similar approval before any API calls. The brief is the contract — every prompt this skill sends comes from it.
+## Phase 1 — Ideation (pixen)
 
-## Phase 1 — Cover (style anchor)
-
-Read the brief's "Cover prompt" and "Cover variations to try" rows. Generate 2–3 options with **different seeds** so the user sees genuine diversity.
+Read the brief's "Ideation prompt" (a tight 1–2-sentence cover summary). Generate **10 thumbnail concepts** with different seeds.
 
 ```bash
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
-  .claude/skills/pixellab-story-assets/scripts/pl-image.ts \
+  .agents/skills/wondo-pixellab-assets/scripts/pl-pixen.ts \
+  --prompt "<ideation prompt + style suffix>" \
+  --width 192 --height 192 \
+  --seed 1000 \
+  --out stories/<slug>/assets/00-ideation/00.png
+```
+
+Repeat with seeds 1001 through 1009. Run in batches of 3–5 to stay under the 429 cap; pixen is fast (sync, no polling) so total wall time is minimal.
+
+When all 10 thumbnails exist, print the contact sheet:
+
+```
+Phase 1 — Ideation thumbnails:
+  00 stories/<slug>/assets/00-ideation/00.png  (seed 1000)
+  01 …                                              (seed 1001)
+  …
+  09 …                                              (seed 1009)
+
+Open them in Preview/Finder and pick TWO. Reply with "pick 03 07" (or two numbers of your choice), or "regen all" for a new sheet, or "regen 04" to re-roll a single thumbnail with a fresh seed.
+```
+
+**Stop.** On user pick, write `00-ideation/PICKED.txt` with the two filenames (one per line). Move to Phase 2.
+
+## Phase 2 — Cover (style anchor)
+
+Use the user's two picked thumbnails (separately) as `reference_image` for two cover options at 192×344.
+
+```bash
+PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
+  .agents/skills/wondo-pixellab-assets/scripts/pl-image.ts \
   --prompt "<cover prompt + style suffix>" \
-  --width 448 --height 600 \
+  --refs stories/<slug>/assets/00-ideation/<picked-A>.png \
+  --width 192 --height 344 \
   --seed 100 \
-  --out .context/pixellab/<slug>/01-cover/option-a.png
+  --out stories/<slug>/assets/01-cover/option-a.png
 ```
 
-Repeat with seeds 101, 102 (or whatever the brief specifies). No `--style`, no `--refs`, no `--no-bg` — this *is* the style anchor.
+Repeat with the second pick → `option-b.png` (seed 101). The cover prompt is the brief's full cover description; the picked thumbnail biases composition. Append each (asset, seed, file, pick-source) to the brief's "Seed log" table.
 
-Append each (asset, seed, file, hint) to the brief's "Seed log" table as you go.
-
-When all options exist, print:
+When both options exist, print:
 
 ```
-Phase 1 — Cover options:
-  1. .context/pixellab/<slug>/01-cover/option-a.png  (seed 100, "<directional hint>")
-  2. .context/pixellab/<slug>/01-cover/option-b.png  (seed 101, "<directional hint>")
-  3. .context/pixellab/<slug>/01-cover/option-c.png  (seed 102, "<directional hint>")
+Phase 2 — Cover options:
+  1. stories/<slug>/assets/01-cover/option-a.png  (seed 100, from ideation 03)
+  2. stories/<slug>/assets/01-cover/option-b.png  (seed 101, from ideation 07)
 
-Open them in Preview/Finder. Tell me which to approve, or "regen N" to re-roll one with a new seed, or "regen all" to start over.
+Tell me which to approve, or "regen 1" to re-roll one with a new seed, or "back to ideation" to pick different thumbnails.
 ```
 
 **Stop.** Wait for the user's pick. On approval (e.g., "approve 2"), copy the chosen file:
 
 ```bash
-cp .context/pixellab/<slug>/01-cover/option-b.png \
-   .context/pixellab/<slug>/01-cover/APPROVED.png
+cp stories/<slug>/assets/01-cover/option-b.png \
+   stories/<slug>/assets/01-cover/APPROVED.png
 ```
 
-Note the approval in the seed log. Move to Phase 2.
+Note the approval in the seed log. Move to Phase 3.
 
-## Phase 2 — Cast portraits
+## Phase 3 — Cast portraits (pixflux + cover init)
 
-For each row in the brief's "Cast" table, in order:
+For each row in the brief's "Cast" table, in order, use the APPROVED cover as `init_image` so the portrait inherits the cover's palette and lighting:
 
 ```bash
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
-  .claude/skills/pixellab-story-assets/scripts/pl-style.ts \
+  .agents/skills/wondo-pixellab-assets/scripts/pl-pixflux.ts \
   --prompt "<character prompt + style suffix>" \
-  --style .context/pixellab/<slug>/01-cover/APPROVED.png \
-  --style-description "<style suffix from brief>" \
+  --init stories/<slug>/assets/01-cover/APPROVED.png \
+  --init-strength 300 \
   --width 192 --height 192 \
   --no-bg \
   --seed 200 \
-  --out .context/pixellab/<slug>/02-cast/<##>-<char-slug>.png
+  --out stories/<slug>/assets/02-cast/<##>-<char-slug>.png
 ```
 
-Increment seeds across characters (200, 201, …) so each portrait has a stable identity to re-roll back to. Skip any `<##>-*.png` that already exists.
+Increment seeds across characters (200, 201, …) so each portrait has a stable identity to re-roll back to. Skip any `<##>-*.png` that already exists. `init-strength` defaults to 300 — lower it (e.g., 200) if portraits over-inherit cover composition.
 
 After all cast portraits exist, print a numbered list and ask:
 
 ```
-Phase 2 — Cast:
-  02 .context/pixellab/<slug>/02-cast/02-<slug>.png   <character name>
-  03 .context/pixellab/<slug>/02-cast/03-<slug>.png   <character name>
+Phase 3 — Cast:
+  02 stories/<slug>/assets/02-cast/02-<slug>.png   <character name>
+  03 stories/<slug>/assets/02-cast/03-<slug>.png   <character name>
   …
 
 Tell me which to approve, or "regen 03" to re-roll a portrait, or "regen 03 with <hint>" to tweak the prompt.
 ```
 
-**Stop.** On regenerate-with-hint, edit only the description, keep the same seed (so the composition stays close); on plain regenerate, increment the seed.
+**Stop.** On regenerate-with-hint, edit only the description, keep the same seed; on plain regenerate, increment the seed.
 
-## Phase 3 — Objects
+## Phase 4 — Objects (pixflux + cover init)
 
-Identical loop to Phase 2 but reading the brief's "Objects" table; outputs land in `.context/pixellab/<slug>/03-objects/<##>-<slug>.png`. Default size 192x192.
+Identical loop to Phase 3 but reading the brief's "Objects" table; outputs land in `stories/<slug>/assets/03-objects/<##>-<slug>.png`. Same flags: `--init <APPROVED cover>`, `--width 192 --height 192`, `--no-bg`. Increment seeds 700, 701, … so cast and object seed ranges don't collide.
 
 Stop and ask for approval the same way.
 
-## Phase 4 — Scenes
+## Phase 5 — Scenes (pl-image, cover style + cast/object refs)
 
 For each row in the brief's "Scenes" table:
 
@@ -188,85 +225,99 @@ For each row in the brief's "Scenes" table:
 
 ```bash
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
-  .claude/skills/pixellab-story-assets/scripts/pl-image.ts \
+  .agents/skills/wondo-pixellab-assets/scripts/pl-image.ts \
   --prompt "<scene prompt naming each ref by number + style suffix>" \
-  --style .context/pixellab/<slug>/01-cover/APPROVED.png \
-  --refs .context/pixellab/<slug>/02-cast/02-sills.png,.context/pixellab/<slug>/02-cast/03-taylor.png \
-  --width 384 --height 384 \
+  --style stories/<slug>/assets/01-cover/APPROVED.png \
+  --refs stories/<slug>/assets/02-cast/02-sills.png,stories/<slug>/assets/02-cast/03-taylor.png \
+  --width 192 --height 192 \
   --seed 1100 \
-  --out .context/pixellab/<slug>/04-scenes/<##>-<slug>.png
+  --out stories/<slug>/assets/04-scenes/<##>-<slug>.png
 ```
 
-`pl-image.ts` will pre-scale the cast/object refs to 384×384 (nearest-neighbor) before posting, writing the scaled copies under `.cache/` next to the originals so re-rolls reuse them.
-
-Skip any `<##>-*.png` that already exists.
+`pl-image.ts` will pre-scale the cast/object refs to 192×192 (nearest-neighbor) before posting. Skip any `<##>-*.png` that already exists.
 
 After a batch (default 3 scenes at a time to avoid 429), print the paths and ask for approve / regenerate. Continue through the table.
 
-## Phase 5 — 3x Scale (nearest-neighbor)
+## Phase 6 — 3× Scale (nearest-neighbor)
 
-Once Phase 4 is approved, run a single deterministic post-process that upscales **every** PNG in the four phase folders to 3× their native size and writes the results to `.context/pixellab/<slug>/05-3x/<phase>/<filename>.png`. This is the deliverable resolution.
+Once Phase 5 is approved, run a single deterministic post-process that upscales **every** PNG in the five phase folders to 3× their native size and writes the results to `stories/<slug>/assets/05-3x/<phase>/<filename>.png`. This is the deliverable resolution.
 
 The scaling is **nearest-neighbor only**: each input pixel becomes a 3×3 block of identical pixels. No anti-aliasing, no resampling, no smoothing — pixel art keeps its crisp grid. Sharp's `kernel: 'nearest'` is the implementation.
 
 ```bash
 node --no-warnings=ExperimentalWarning \
-  .agents/skills/pixellab-story-assets/scripts/pl-scale.ts \
+  .agents/skills/wondo-pixellab-assets/scripts/pl-scale.ts \
   --slug <story-slug>
 ```
 
 No API calls, no token, no per-asset gate. The script:
 
-- Mirrors the four phase subdirs (`01-cover`, `02-cast`, `03-objects`, `04-scenes`) under `05-3x/`.
+- Mirrors the phase subdirs under `05-3x/`.
 - Skips files that already exist in `05-3x/` (idempotent — same skip rule as the rest of the skill). Pass `--force` to overwrite.
 - Prints `wrote 05-3x/<phase>/<file>.png (W×H -> W'×H')` per file.
 - Defaults to factor 3; override with `--factor N` (integer ≥ 2). Anything other than 3 is a user override — surface it in the message back to the user.
 
-After it runs, print a one-line summary (`scaled=N skipped=M factor=3x output=.context/pixellab/<slug>/05-3x`) and tell the user where to find the deliverables.
+After it runs, print a one-line summary (`scaled=N skipped=M factor=3x output=stories/<slug>/assets/05-3x`) and tell the user where to find the deliverables. Final cover delivery is 576×1032; cast / objects / scenes deliver at 576×576.
 
 ## Recovery
 
-- **429 at submit time:** drop concurrency and retry. The script also backs off automatically while polling.
+- **429 at submit time:** drop concurrency and retry. The polling helper backs off automatically while polling.
 - **Bad output ("doesn't look like the character"):** regenerate with the *same* seed and a sharper prompt before changing the seed. If three same-seed regens don't fix it, reroll with a fresh seed.
+- **One element wrong (e.g., cape colour):** instead of full re-roll, use `pl-bitforge.ts` with `--inpaint` (the existing image) + `--mask` (a PNG painted white over the bad area) to regenerate just that region.
 - **Partial run / interruption:** re-invoke the skill with the same slug. The skill skips any asset whose target file already exists. If the user wants a regenerate, delete the file first or pass an explicit "regen <##>" instruction.
-- **Cover doesn't match expectations after Phase 1:** never proceed to Phase 2 with a cover the user is lukewarm on — Phase 2/3/4 all inherit its style, and re-running them later costs as much as redoing them now.
+- **Cover doesn't match expectations after Phase 2:** never proceed to Phase 3 with a cover the user is lukewarm on — Phase 3/4/5 all inherit its style, and re-running them later costs as much as redoing them now.
 
 ## Quick API cheat sheet
 
 ```bash
-# Phase 1 — cover (no style, no refs)
-npx tsx .claude/skills/pixellab-story-assets/scripts/pl-image.ts \
-  --prompt "<…>" --width 448 --height 600 --seed 100 \
-  --out .context/pixellab/<slug>/01-cover/option-a.png
+# Phase 1 — ideation thumbnail (sync, no polling)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-pixen.ts \
+  --prompt "<…>" --width 192 --height 192 --seed 1000 \
+  --out stories/<slug>/assets/00-ideation/00.png
 
-# Phase 2/3 — character or object (style = cover, no_bg)
-npx tsx .claude/skills/pixellab-story-assets/scripts/pl-style.ts \
-  --prompt "<…>" --style <APPROVED cover> --style-description "<style suffix>" \
-  --width 256 --height 256 --no-bg --seed 200 \
-  --out .context/pixellab/<slug>/02-cast/02-<slug>.png
+# Phase 2 — cover (ref = picked thumbnail)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-image.ts \
+  --prompt "<…>" --refs <picked-thumbnail.png> \
+  --width 192 --height 344 --seed 100 \
+  --out stories/<slug>/assets/01-cover/option-a.png
 
-# Phase 4 — scene (style = cover, refs = cast/objects, max 4; refs auto-prescaled to canvas)
-npx tsx .claude/skills/pixellab-story-assets/scripts/pl-image.ts \
+# Phase 3/4 — cast or object (init = APPROVED cover, no_bg, sync)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-pixflux.ts \
+  --prompt "<…>" --init <APPROVED cover> --init-strength 300 \
+  --width 192 --height 192 --no-bg --seed 200 \
+  --out stories/<slug>/assets/02-cast/02-<slug>.png
+
+# Phase 5 — scene (style = cover, refs = cast/objects, max 4; refs auto-prescaled)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-image.ts \
   --prompt "<…>" --style <APPROVED cover> \
   --refs <p1.png>,<p2.png>,<p3.png> \
-  --width 384 --height 384 --seed 1100 \
-  --out .context/pixellab/<slug>/04-scenes/11-<slug>.png
+  --width 192 --height 192 --seed 1100 \
+  --out stories/<slug>/assets/04-scenes/11-<slug>.png
 
-# Phase 5 — 3x nearest-neighbor scale (no API calls, runs unattended)
-node --no-warnings=ExperimentalWarning \
-  .agents/skills/pixellab-story-assets/scripts/pl-scale.ts \
+# Phase 6 — 3x nearest-neighbor scale (no API calls, runs unattended)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-scale.ts \
   --slug <slug>
-# Output: .context/pixellab/<slug>/05-3x/{01-cover,02-cast,03-objects,04-scenes}/*.png
+# Output: stories/<slug>/assets/05-3x/{00-ideation,01-cover,02-cast,03-objects,04-scenes}/*.png
+
+# Side-tool — inpaint one region of an existing image (sync, max 200×200)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-bitforge.ts \
+  --prompt "<what should change>" --inpaint <original.png> --mask <mask.png> \
+  --width 192 --height 192 --seed 9000 --out <patched.png>
+
+# Side-tool — convert a non-pixel image to pixel art (sync)
+node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-pixelify.ts \
+  --in <photo.png> --out <pixel.png> --out-width 192 --out-height 192
 ```
 
-All three scripts read `PIXELLAB_TOKEN` from env, log progress to stderr, print the output path on stdout, and exit non-zero on failure.
+All scripts read `PIXELLAB_TOKEN` from env, log progress to stderr, print the output path on stdout, and exit non-zero on failure.
 
 ## References
 
 | File | What's in it |
 |---|---|
-| `references/endpoints.md` | Request/response shape for `/generate-image-v2`, `/generate-with-style-v2`, `/background-jobs/{id}`; what fields each phase fills. |
+| `references/endpoints.md` | Request/response shapes for every endpoint this skill uses. Points at https://api.pixellab.ai/v2/llms.txt as the canonical source of truth. |
 | `references/prompt-patterns.md` | Style suffix discipline, prompt ordering, seed strategy, why no negative prompts. |
-| `references/brief-template.md` | The markdown skeleton Phase 0 fills, plus drafting heuristics for picking what counts as a character/object/scene. |
-| `.context/attachments/pixellab-api-guide.md` | Original guide this skill is built on — endpoint map for the rest of the API (rotations, inpainting, sprites). |
-| `.claude/skills/wondo-development/SKILL.md` | Story / chapter / knot / tag structure for Phase 0 brief drafting. |
+| `references/brief-template.md` | The markdown skeleton Phase 0 fills, plus drafting heuristics. |
+| https://api.pixellab.ai/v2/llms.txt | **Canonical API spec.** Fetch this whenever an endpoint detail is unclear or the spec may have drifted. |
+| `.context/attachments/pixellab-api-guide.md` | Original guide this skill is built on — endpoint map for the rest of the API (rotations, animation, sprites). |
+| `.agents/skills/wondo-interactive-fiction/SKILL.md` | Knot / tag / variable structure for Phase 0 brief drafting; produces the `.ink` file this skill consumes. |
