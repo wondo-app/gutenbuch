@@ -19,12 +19,14 @@ function usage(): never {
               [--seed <n>]
               [--no-bg]
 
-Wraps POST /generate-with-style-v2. Used for CAST PORTRAITS (Phase 3) and
-OBJECTS (Phase 4). The --style PNG is the APPROVED cover from Phase 2; its
-native dimensions can differ from the output canvas (API reads the PNG IHDR).
+DEPRECATED. The current pipeline does not call /generate-with-style-v2.
+Cast / places / items now go through pl-pixen.ts (Phase 1-3) followed by
+pl-remove-bg.ts; the cover and scenes go through pl-image.ts with
+reference_images carrying per-image usage_description (Phase 4-5). Kept
+for legacy briefs only.
+
 DO NOT pass --no-bg — the endpoint corrupts output when no_background:true
-is sent alongside style_image; mask backgrounds post-generation via
-pl-bitforge.ts --inpaint if portraits need to composite into scenes.
+is sent alongside style_image.
 Reads PIXELLAB_TOKEN from env.`);
   process.exit(2);
 }

@@ -221,12 +221,19 @@ export function extractFirstImage(jobResult: unknown): string {
 export interface ParsedFlags {
   string: Record<string, string>;
   bool: Record<string, boolean>;
+  repeated: Record<string, string[]>;
 }
 
-export function parseFlags(argv: string[], boolFlags: string[] = []): ParsedFlags {
+export function parseFlags(
+  argv: string[],
+  boolFlags: string[] = [],
+  repeatedFlags: string[] = [],
+): ParsedFlags {
   const string: Record<string, string> = {};
   const bool: Record<string, boolean> = {};
+  const repeated: Record<string, string[]> = {};
   for (const f of boolFlags) bool[f] = false;
+  for (const f of repeatedFlags) repeated[f] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith("--")) continue;
@@ -239,10 +246,14 @@ export function parseFlags(argv: string[], boolFlags: string[] = []): ParsedFlag
     if (next === undefined || next.startsWith("--")) {
       throw new Error(`--${key} requires a value`);
     }
-    string[key] = next;
+    if (repeatedFlags.includes(key)) {
+      repeated[key].push(next);
+    } else {
+      string[key] = next;
+    }
     i++;
   }
-  return { string, bool };
+  return { string, bool, repeated };
 }
 
 export function requireFlag(flags: ParsedFlags, key: string): string {
