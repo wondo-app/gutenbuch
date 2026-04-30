@@ -11,22 +11,23 @@ The shape of every run:
 
 ```
 slug → brief draft
-       → Phase 1: pixen × N cast portraits   (512×512, no_background=true, 2 tries each)
-                                               → user APPROVES one per character
-       → Phase 2: pixen × ≤4 places          (512×512, no_background=true, 2 tries each)
-                                               → user APPROVES one per place
-       → Phase 3: pixen × N items            (512×512, no_background=true, 2 tries each)
-                                               → user APPROVES one per item
-       → Phase 4: pl-image × 3 cover options (176×176, refs from cast/places/items, each
+       → Phase 1: pixen × N cast portraits   (512×512, no_background=true, one per character)
+                                               → user APPROVES or asks for regen
+       → Phase 2: pixen × ≤4 places          (512×512, no_background=true, one per place)
+                                               → user APPROVES or asks for regen
+       → Phase 3: pixen × N items            (512×512, no_background=true, one per item)
+                                               → user APPROVES or asks for regen
+       → Phase 4: pl-image × 1 cover         (512×512, refs from cast/places/items, each
                                                carrying a usage_description)
-                                               → user APPROVES one
-       → Phase 5: pl-image × N scenes        (176×176, ≤4 refs from cast/places/items
+                                               → user APPROVES or asks for regen
+       → Phase 5: pl-image × N scenes        (512×512, ≤4 refs from cast/places/items
                                                and optionally the cover, each carrying a
                                                usage_description)
+                                               → user APPROVES or asks for regen
        → Phase 6: 3× nearest-neighbor scale   (every PNG, no API calls)
 ```
 
-Stop and ask the user to approve between each generation phase (1–5) — never burn through them unattended. Phase 6 is a deterministic local post-process; it runs unattended after Phase 5 approval.
+Generate one asset per row — no upfront A/B/C. If the user wants alternatives, regen on demand (same seed for sharper-prompt iteration; new seed for a fresh roll). Stop and ask the user to approve between each generation phase (1–5) — never burn through them unattended. Phase 6 is a deterministic local post-process; it runs unattended after Phase 5 approval.
 
 **Side-tools (not part of the pipeline):**
 - `pl-remove-bg.ts` — `/remove-background` for halo cleanup when pixen's `no_background` leaves residue. Pixen ships transparent natively, so this is rarely needed.
@@ -44,17 +45,17 @@ Stop and ask the user to approve between each generation phase (1–5) — never
 
 4. **Cast / places / items ship transparent via pixen's `no_background: true`.** No separate `/remove-background` call is needed in the main pipeline — pixen handles transparent output natively. Reach for `pl-remove-bg.ts` only when a pixen output ships with halo artifacts that need post-process cleanup.
 
-5. **Sizes are locked per phase.** Cast / places / items 512×512 (pixen sync, native max 768). Cover and scenes 176×176 (`/generate-image-v2`). The scripts validate post-write and hard-fail on mismatch. Edit the brief template if the canonical needs to change project-wide; don't override per call. Phase 6 deliverables are 1536×1536 for cast/places/items and 528×528 for cover/scenes.
+5. **Sizes are locked per phase.** Cast / places / items 512×512 (pixen sync, native max 768). Cover and scenes 512×512 (`/generate-image-v2`, max 792×688 — keep both dims ≤ 688 or use 512 as the safe canonical). The scripts validate post-write and hard-fail on mismatch. Edit the brief template if the canonical needs to change project-wide; don't override per call. Phase 6 deliverables are 1536×1536 across all phases (3× of the 512×512 source).
 
 6. **Two response patterns — sync and async.** `/create-image-pixen`, `/create-image-pixflux`, `/create-image-bitforge`, `/image-to-pixelart`, `/remove-background` are synchronous (HTTP 200 with image data) and don't need polling. `/generate-image-v2` is async (`202 + job_id`) and `pl-poll.ts:pollJob` handles it. Don't bypass the polling helpers.
 
 7. **Cap simultaneous jobs at 3–5.** The API rate-limits with 429 above that. Other phases are mostly serial per asset.
 
-8. **Reuse `seed` to tweak; change `seed` to re-roll.** Same seed + slightly edited prompt = a refined version of the last shot. Different seed = a fresh composition. For 2-tries-per-asset (Phases 1–3), use 2 different seeds so the user sees real diversity; for the cover (Phase 4), use 3 different seeds.
+8. **Reuse `seed` to tweak; change `seed` to re-roll.** Same seed + slightly edited prompt = a refined version of the last shot. Different seed = a fresh composition. The skill generates one asset per row by default — if the user asks for a regen, try a sharper prompt at the same seed first; only switch seeds when the same-seed regens have plateaued. **Log every seed used** to the brief's seed log so any asset is reproducible later.
 
 9. **The skill is idempotent.** If `<##>-<slug>.png` already exists in the target directory, skip it unless the user explicitly asks for a regenerate. Resume after interruption by re-invoking with the same slug.
 
-10. **`pl-image.ts` auto-prescales references.** 512×512 cast/places/items get nearest-neighbor scaled down to the scene canvas (176×176) before posting. The cached scaled copy lives under `<refdir>/.cache/<name>.scaled-176x176.png`. References larger than 1024×1024 are also downscaled server-side; non-square references are padded to square with transparent pixels.
+10. **`pl-image.ts` auto-prescales references when canvas size differs.** With both refs and canvas at 512×512 (current default), no rescale fires; the refs are posted as-is. When sizes diverge (e.g., a 768×768 ref into a 512×512 canvas), nearest-neighbor scaling caches the result at `<refdir>/.cache/<name>.scaled-<W>x<H>.png` and reuses it across re-rolls. References larger than 1024×1024 are also downscaled server-side; non-square references are padded to square with transparent pixels.
 
 11. **No legible text in scenes.** Pixel-art models render real words as garbled letterforms. Describe signage by shape, color, and ornament — never by what it says. See `references/prompt-patterns.md`.
 
@@ -89,9 +90,9 @@ stories/<slug>/assets/
 ├── 01-cast/      02-<slug>.png  03-<slug>.png  …          (transparent 512×512)
 ├── 02-places/    07-<slug>.png  08-<slug>.png  …          (transparent 512×512)
 ├── 03-items/     11-<slug>.png  12-<slug>.png  …          (transparent 512×512)
-├── 04-cover/     option-a.png  option-b.png  option-c.png  APPROVED.png
-├── 05-scenes/    31-<slug>.png  32-<slug>.png  …          (176×176)
-└── 06-3x/        (Phase 6 — mirrors the five phase folders at 3× resolution)
+├── 04-cover/     21-cover.png                                            (512×512)
+├── 05-scenes/    31-<slug>.png  32-<slug>.png  …          (512×512)
+└── 06-3x/        (Phase 6 — mirrors the five phase folders at 3× resolution; all 1536×1536)
 ```
 
 ## Inputs
@@ -115,7 +116,7 @@ Once a brief exists and the user has reviewed / edited it, they give you the gre
 
 ## Phase 1 — Cast portraits (pixen, transparent)
 
-For each row in the brief's "Cast" table, generate **2 seed variants** at 512×512 with `no_background: true`. User approves one.
+For each row in the brief's "Cast" table, generate **one** portrait at 512×512 with `no_background: true`. Print the path and ask the user to approve or regen.
 
 ```bash
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
@@ -127,9 +128,7 @@ PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
   --out stories/<slug>/assets/01-cast/02-<char-slug>.png
 ```
 
-Repeat with seed 201 for the second try → `02-<char-slug>.alt.png`. Print both paths and ask the user to "approve 1 / 2 / regen". On approval, copy the picked file to the canonical `<##>-<char-slug>.png` (or rename the loser to `.alt.png`).
-
-Increment seeds across characters (200, 201 for char 1; 210, 211 for char 2; …) so each portrait has a stable identity to re-roll back to. Skip any canonical file that already exists.
+If the user requests a regen, prefer iterating on the prompt at the same seed first; switch seeds (e.g., 201, 202 …) only after same-seed regens have plateaued. Increment the base seed across characters (200 for char 1, 210 for char 2, 220 for char 3, …) so each portrait has its own stable seed lineage to iterate within. Always overwrite the canonical file in place — never write sibling option files. Skip any canonical file that already exists.
 
 ## Phase 2 — Places (pixen, transparent)
 
@@ -145,7 +144,7 @@ Stop and ask for approval the same way as Phases 1 and 2.
 
 ## Phase 4 — Cover (`/generate-image-v2`)
 
-Generate **3 seed variants** of the cover at 176×176 with up to 4 references from cast/places/items, each with a `usage_description`.
+Generate **one** cover at 512×512 with up to 4 references from cast/places/items, each with a `usage_description`.
 
 ```bash
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
@@ -154,12 +153,12 @@ PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
   --ref stories/<slug>/assets/01-cast/02-ray.png         --ref-use "use this person as Ray" \
   --ref stories/<slug>/assets/01-cast/03-porky.png       --ref-use "use this person as Porky" \
   --ref stories/<slug>/assets/02-places/07-study.png     --ref-use "use this place as the setting" \
-  --width 176 --height 176 \
+  --width 512 --height 512 \
   --seed 100 \
-  --out stories/<slug>/assets/04-cover/option-a.png
+  --out stories/<slug>/assets/04-cover/21-cover.png
 ```
 
-Repeat with seeds 101 and 102 → `option-b.png`, `option-c.png`. Print all three paths and ask the user to "approve 1 / 2 / 3" or "regen N" or "back to phase N". On approval, copy the picked file to `04-cover/APPROVED.png`. Note the approved seed in the brief's seed log.
+Print the path and ask the user to approve or regen. As with cast/places/items, prefer iterating on the prompt at the same seed first; switch seeds (e.g., 101, 102 …) only after same-seed regens have plateaued. Always overwrite `21-cover.png` in place. Note the seed of the approved cover in the brief's seed log so it can be reproduced or further iterated.
 
 The references column in the brief table tells you which assets to pass and what each `usage_description` should say — every entry has its `(use this …)` clause attached.
 
@@ -167,7 +166,7 @@ The references column in the brief table tells you which assets to pass and what
 
 For each row in the brief's "Scenes" table:
 
-1. Resolve `references` from the table's asset numbers. For each asset number, find the file at `01-cast/<##>-*.png`, `02-places/<##>-*.png`, or `03-items/<##>-*.png`. The cover (`#21`) lives at `04-cover/APPROVED.png`. If a referenced asset doesn't exist, surface the error to the user — do not guess.
+1. Resolve `references` from the table's asset numbers. For each asset number, find the file at `01-cast/<##>-*.png`, `02-places/<##>-*.png`, or `03-items/<##>-*.png`. The cover (`#21`) lives at `04-cover/21-cover.png`. If a referenced asset doesn't exist, surface the error to the user — do not guess.
 2. Cap the list at 4. If the brief lists more, drop the lowest-priority and tell the user which.
 3. Call:
 
@@ -175,15 +174,17 @@ For each row in the brief's "Scenes" table:
 PIXELLAB_TOKEN=$PIXELLAB_TOKEN node --no-warnings=ExperimentalWarning \
   .agents/skills/wondo-pixellab-assets/scripts/pl-image.ts \
   --prompt "<1–3-sentence scene description>" \
-  --ref stories/<slug>/assets/04-cover/APPROVED.png      --ref-use "use this color palette" \
+  --ref stories/<slug>/assets/04-cover/21-cover.png      --ref-use "use this color palette" \
   --ref stories/<slug>/assets/01-cast/02-ray.png         --ref-use "use this person as Ray" \
   --ref stories/<slug>/assets/02-places/07-study.png     --ref-use "use this place as the setting" \
-  --width 176 --height 176 \
+  --width 512 --height 512 \
   --seed 1100 \
   --out stories/<slug>/assets/05-scenes/<##>-<scene-slug>.png
 ```
 
-`pl-image.ts` will pre-scale every ref (nearest-neighbor) to 176×176 before posting. Skip any `<##>-*.png` that already exists.
+When refs and canvas are both 512×512, `pl-image.ts` posts the refs as-is (no pre-scale). When sizes diverge it nearest-neighbor scales every ref to the canvas before posting. Skip any `<##>-*.png` that already exists.
+
+**Prompt discipline for scenes:** keep prompts to physical description — *who is where, doing what, in what light*. Let the references do the identity work; don't restate biographical details that the cast portrait already encodes. Strip narrative tail-lines (the brief's atmospheric closing sentences) — pixel-art models render them as literal captions across the bottom of the frame. When 3+ refs are passed, name them inline by their `--ref` order (`image 1`, `image 2`, …) so the model binds the right portrait to the right role. See `references/prompt-patterns.md` for the full set of patterns and content-policy traps.
 
 After a batch (default 3 scenes at a time to avoid 429), print the paths and ask for approve / regenerate. Continue through the table.
 
@@ -206,7 +207,7 @@ No API calls, no token, no per-asset gate. The script:
 - Prints `wrote 06-3x/<phase>/<file>.png (W×H -> W'×H')` per file.
 - Defaults to factor 3; override with `--factor N` (integer ≥ 2). Anything other than 3 is a user override — surface it in the message back to the user.
 
-After it runs, print a one-line summary (`scaled=N skipped=M factor=3x output=stories/<slug>/assets/06-3x`) and tell the user where to find the deliverables. Final cover delivery is 528×528; cast / places / items deliver at 1536×1536; scenes deliver at 528×528.
+After it runs, print a one-line summary (`scaled=N skipped=M factor=3x output=stories/<slug>/assets/06-3x`) and tell the user where to find the deliverables. With the 512×512 source canvas across all phases, every deliverable lands at 1536×1536.
 
 ## Recovery
 
@@ -230,16 +231,16 @@ node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scri
   --prompt "<…>" \
   --ref <ray.png>   --ref-use "use this person as Ray" \
   --ref <study.png> --ref-use "use this place as the setting" \
-  --width 176 --height 176 --seed 100 \
-  --out stories/<slug>/assets/04-cover/option-a.png
+  --width 512 --height 512 --seed 100 \
+  --out stories/<slug>/assets/04-cover/21-cover.png
 
 # Phase 5 — scene (cover + cast/places/items refs; max 4)
 node --no-warnings=ExperimentalWarning .agents/skills/wondo-pixellab-assets/scripts/pl-image.ts \
   --prompt "<…>" \
-  --ref <APPROVED-cover.png> --ref-use "use this color palette" \
+  --ref <21-cover.png>       --ref-use "use this color palette" \
   --ref <ray.png>            --ref-use "use this person as Ray" \
   --ref <study.png>          --ref-use "use this place as the setting" \
-  --width 176 --height 176 --seed 1100 \
+  --width 512 --height 512 --seed 1100 \
   --out stories/<slug>/assets/05-scenes/31-<slug>.png
 
 # Phase 6 — 3× nearest-neighbor scale (no API calls, runs unattended)
