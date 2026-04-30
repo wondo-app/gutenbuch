@@ -15,9 +15,9 @@ function usage(): never {
   console.error(`Usage:
   pl-scale.ts --slug <story-slug> [--factor 3] [--input-dir <path>] [--force]
 
-Walks stories/<slug>/assets/{01-cover,02-cast,03-objects,04-scenes}/*.png
-(plus 00-ideation if present) and writes nearest-neighbor upscaled copies to
-stories/<slug>/assets/05-3x/<same-subdir>/<same-filename>.png.
+Walks stories/<slug>/assets/{01-cast,02-places,03-items,04-cover,05-scenes}/*.png
+and writes nearest-neighbor upscaled copies to
+stories/<slug>/assets/06-3x/<same-subdir>/<same-filename>.png.
 
 Nearest-neighbor: each input pixel becomes a factor x factor block of the same
 color. No anti-aliasing, no resampling, no artifacts. Pixel art stays crisp.
@@ -27,13 +27,13 @@ Flags:
                 stories/<slug>/assets/ unless --input-dir overrides.
   --factor      Integer scale factor. Default 3.
   --input-dir   Override input directory (defaults to stories/<slug>/assets).
-                Output always goes to <input-dir>/05-3x/.
+                Output always goes to <input-dir>/06-3x/.
   --force       Overwrite files in 05-3x/ that already exist.
 `);
   process.exit(2);
 }
 
-const PHASE_DIRS = ["00-ideation", "01-cover", "02-cast", "03-objects", "04-scenes"] as const;
+const PHASE_DIRS = ["01-cast", "02-places", "03-items", "04-cover", "05-scenes"] as const;
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
 
   const sharp = requireSharp() as SharpFn;
 
-  const outRoot = join(inputDir, "05-3x");
+  const outRoot = join(inputDir, "06-3x");
 
   let scaled = 0;
   let skipped = 0;

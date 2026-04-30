@@ -50,10 +50,11 @@ If the brief mentions a building or shop by its function (a bank, a chemist, a s
 PixelLab is deterministic given (prompt, seed, references, style). This means:
 
 - **Iterating an asset** ("the cape should be teal, not green"): keep the same `--seed`, edit only the prompt. The composition stays close to what the user just approved; only the changed concept moves.
-- **Genuinely re-rolling** ("none of these covers feel right, give me three more"): change `--seed` (e.g., increment by 1, or pick a new random integer). Each call gets a fresh roll.
-- **Phase 1 cover options**: vary seed across the 2–3 options so the user sees real diversity, not three near-identical takes.
+- **Genuinely re-rolling** ("this composition isn't working, try something different"): change `--seed` (e.g., increment by 1, or pick a new random integer). Each call gets a fresh roll.
 
-The scripts default to letting the API auto-pick a seed if `--seed` isn't passed. **Log every seed used** to the brief or a `seeds.txt` so regeneration is reproducible later.
+The skill generates one asset per row by default — never burn API calls producing A/B/C alternatives upfront. If a regen is needed, prefer same-seed prompt iteration first; only switch seeds after same-seed regens have plateaued.
+
+The scripts default to letting the API auto-pick a seed if `--seed` isn't passed. **Log every seed used** to the brief or a `seeds.txt` so any asset can be reproduced or further iterated.
 
 ## Prompt order: subject → action → environment → style suffix
 
@@ -70,3 +71,76 @@ The model sees `reference_images` as visual hints, not labels. If your scene des
 ## Negative prompts are not a thing here
 
 PixelLab has no `negative_prompt` field. Phrasing like "no anime, no chibi, no smooth gradients" in the description sometimes helps and sometimes backfires (the model latches on to the rejected concept). Prefer positive descriptors of what you want.
+
+## Style suffix can render as an artifact, not a vibe
+
+The brief's "Prompt suffix" is meant as aesthetic shorthand, but pixen reads concrete-noun phrases as instructions to render those nouns. A suffix like `"pulp-cover red on banner moments"` makes pixen render a literal pulp-cover banner with garbled text on portraits where there is no banner. Symptom: pseudo-letters across the top of cast portraits.
+
+Mitigation: when an asset doesn't include the artifact the suffix names, strip that phrase. Keep palette/medium/lighting; drop nouns that name an object the asset isn't.
+
+✅ for cast: `"wartime-pulp pixel art, sodium-amber lamplight, ink-black shadows, hard pixels, dithered shading, 1940s noir register"`
+❌ for cast: `"… pulp-cover red on banner moments …"` (no banner in a portrait)
+
+## Cast / places need more than `--no-bg` to ship clean
+
+`no_background: true` strips alpha based on what the model considers *background*. If the prompt names environment ("on the beach", "in any room", "at his desk"), the model paints those elements as *foreground composition* and they survive the alpha-strip — even though they're scenery you didn't want.
+
+Cast/place portrait prompts get a hard isolation prefix:
+
+> Isolated character portrait, head-and-shoulders to chest, plain transparent background, no scenery, no chair, no lamp, no text, no banner, no logo, no signage.
+
+Then the figure description, with all environmental cues stripped:
+
+✅ "lean middle-aged 1943 pulp-fiction writer in shirtsleeves and waistcoat, briar pipe in hand"
+❌ "lean middle-aged writer in his cluttered study, leaning back in his armchair with the war chart behind him"
+
+## Scene prompts: strip narrative imperatives — they render as captions
+
+PixelLab models render literary phrasing as literal text in the image. Brief language like *"The first time the gift looks less like a wonder and more like a hijack."* gets composed as a caption across the bottom of the scene in pulp-cover lettering, garbled.
+
+Symptoms: bottom-bar caption, top-bar headline, tag-lines on awnings.
+
+Rule: a scene prompt is a stage direction, not a tagline. Keep it to physical description (who is where, doing what, in what light). Drop:
+
+- Thesis statements ("The room has the precise wrong people in it.")
+- Atmospheric tail-lines ("No spectacle — just a small, deliberate wrongness on the water.")
+- Anything that reads like it could be the caption *under* the image rather than what the image *shows*.
+
+Add an explicit anti-text guard to the suffix on every scene call:
+
+> No text, no captions, no banners, no readable letters or words anywhere in the frame.
+
+## Let the references do the identity work
+
+References carry identity. The prompt's job is **action, position, posture, light** — not biography. Restating the character's age, hair color, or name in the prompt adds noise to the ref's signal and competes with the `usage_description`.
+
+✅ "Ray sits at the desk on the left holding a briar pipe; Lisbeth stands one step back with arms folded."
+❌ "Ray (lean middle-aged pulp-fiction writer in shirtsleeves with combed dark hair) sits at the desk on the left holding his briar pipe; Lisbeth (late twenties, mop of unruly wavy brown hair, sob-sister journalist) stands one step back."
+
+The cast portrait already says "this is Ray." The prompt only needs to say what he's doing.
+
+## Annotate references in prose by position number
+
+When 3+ refs are passed, name them inline by their `--ref` order (`image 1`, `image 2`, …) so the model binds the right portrait to the right role. This reinforces `usage_description` and reduces identity swaps in dense scenes.
+
+✅ "The heavyset man (image 1) reclines propped on his elbows on the dark sand; the young woman (image 2) stands one step back with her arms crossed."
+❌ "The heavyset man reclines propped on his elbows on the dark sand; the young woman stands one step back with her arms crossed." (model has to guess which ref maps to which role)
+
+## Avoid words that name printed text artifacts
+
+Words like *newspaper, headline, front page, magazine cover, signage, poster* induce text rendering even when the prompt forbids it. If an item is a newspaper page, describe its visual content only:
+
+✅ "a torn cream-paper page with ragged edges; at the center, a coarse algae-green muscular man-shape rising from rough sea-lines"
+❌ "a torn pulp-newspaper page with a bold black 8-column headline at the top, beneath it a sketch of a green giant rising from the sea"
+
+Even with "no readable letters" guards, the word "newspaper" alone is enough to get pseudo-headlines. The fix is structural: don't name the artifact, describe what's on the page.
+
+## PixelLab content-policy traps
+
+`/generate-image-v2` returns `status: failed` with `detail: "Generation failed because it is against policy."` on certain phrasings even when the underlying scene is innocuous. Known triggers from real briefs:
+
+- `"stretched on the sand"` (body + beach context)
+- `"looking smaller than he was"` (body diminishment language)
+- Naming a character whose name reads as a slur or sensitive term combined with body imagery
+
+Mitigation: rephrase to neutral physical language. `"reclining propped on his elbows"` ships; `"stretched on the sand"` blocks. `"sitting quietly in the armchair"` ships; `"looking smaller than he was"` blocks. The fix is mechanical and rarely requires reworking the actual scene.
