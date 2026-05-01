@@ -20,7 +20,7 @@ That didn't seem to comfort him much. "I sure hope this thing works," he said we
 
 With the fate of the world at stake, I sure hoped so myself; but I wasn't going to express any doubts. Baldy and I sat down and lit up our pipes.
 
-"Just keep your mind on the nearest submarine Commander," I said. "Then jump in. Go to work. Then *withdraw*. You'll be back here with us instantaneously. It's a cinch."
+"Just keep your mind on the nearest submarine Commander," I said. "Then jump in. Go to work. Then withdraw. You'll be back here with us instantaneously. It's a cinch."
 
 "I sure hope so," he agreed.
 
@@ -33,7 +33,7 @@ Porky stretched on the sand with his head and shoulders propped up by his elbows
 Time passed. The wind picked up.
 
 + [Lisbeth gasped — a great cascade of water, far out, and the impossible silhouette of a green man-shape rising from the sea.] -> green_giant_path
-+ [A low, distant *thump*. Then another. Out where the U-boats run, something that should be intact has stopped being intact.] -> direct_sub_path
++ [A low, distant thump. Then another. Out where the U-boats run, something that should be intact has stopped being intact.] -> direct_sub_path
 
 === green_giant_path ===
 We all saw it at once. Out in front of us, half a mile out maybe, a great green man-shape towered two or three hundred feet into the air, wading waist deep in the water, parallel to the beach, toward Sandy Hook.
@@ -48,7 +48,7 @@ What happened next was chaos. One Nazi plane swerved low over the Green Giant. S
 
 I heard Baldy mutter: "Good work! Very neat!"
 
-*Good work.* That tipped me off. Porky. By some mischance for Hitler, Porky landed in the giant.
+Good work. That tipped me off. Porky. By some mischance for Hitler, Porky landed in the giant.
 
 ~ porky_hosts += green_giant
 ~ sub_possessed = false
@@ -78,7 +78,7 @@ Porky's body on the sand gave a convulsive shudder, and he was sitting up, blink
 -> withdrawal_check
 
 === green_press ===
-"Tell him — somehow to *go for the subs*," I muttered, but Porky was already in the giant and the giant was already turning. He waded deeper, where the U-boats were. He went under. The water churned where his head had been.
+"Tell him — somehow to go for the subs," I muttered, but Porky was already in the giant and the giant was already turning. He waded deeper, where the U-boats were. He went under. The water churned where his head had been.
 
 Then a long stretch of nothing. No body, no giant, no signs.
 
@@ -117,7 +117,7 @@ And then nothing dramatic happened, which was exactly what we'd been hoping for.
 
 "He's in," Baldy agreed.
 
-After perhaps four minutes there was a low, distant sound. Not an explosion exactly, more a *thump*, the kind of sound water makes when something large under it has stopped being intact. A few seconds later, another *thump*.
+After perhaps four minutes there was a low, distant sound. Not an explosion exactly, more a thump, the kind of sound water makes when something large under it has stopped being intact. A few seconds later, another thump.
 
 Porky's body twitched and his eyes opened, dazed.
 
@@ -153,7 +153,7 @@ Porky looked at Lisbeth. She didn't say anything. She looked at the water.
 
 He stretched out again. Concentrated. Twitched. Went limp.
 
-We waited. A long time, this time. Long enough that Baldy and I stopped talking and just sat. The wind kept picking up. Far out — closer than the last one — another low *thump*. And another, fainter, farther. The sub had taken at least two of them with it. We waited for Porky to come back.
+We waited. A long time, this time. Long enough that Baldy and I stopped talking and just sat. The wind kept picking up. Far out — closer than the last one — another low thump. And another, fainter, farther. The sub had taken at least two of them with it. We waited for Porky to come back.
 
 + [He came back. Eyes open, breathing fast, sweating. Close, he said. Close.] -> direct_press_safe
 + [He didn't come back. The body on the sand stopped breathing.] -> direct_press_lost
@@ -171,7 +171,7 @@ But he had gotten out. And down at the rocks, where the first sub had run agroun
 === direct_press_lost ===
 He didn't come back.
 
-I am putting it that simply because the alternatives, *he was in too long*, *the withdrawal failed*, *the explosion took him with it*, are all true and none of them are sufficient. The body on the sand kept breathing for a few minutes more, and then it stopped. Lisbeth was holding his hand. We were too far from any kind of help that would have helped.
+I am putting it that simply because the alternatives, he was in too long, the withdrawal failed, the explosion took him with it, are all true and none of them are sufficient. The body on the sand kept breathing for a few minutes more, and then it stopped. Lisbeth was holding his hand. We were too far from any kind of help that would have helped.
 
 Out on the water, three submarines were not coming back to Berlin.
 
@@ -184,7 +184,7 @@ We tried to wake him. Lisbeth slapped his face, gently and then less gently. Bal
 
 But the bodies on the sand, Porky's body, our four bodies, were no longer alone. Spectators in coats over pajamas. A man with a flashlight. A woman who stood at the dune line with her hand over her mouth, looking at the dark water where her radio had just told her something terrible was happening, and then at us.
 
-The man with the flashlight came over. "Was that you?" he asked. "Are *you* doing this?"
+The man with the flashlight came over. "Was that you?" he asked. "Are you doing this?"
 
 It is a terrible question. There is no good answer.
 

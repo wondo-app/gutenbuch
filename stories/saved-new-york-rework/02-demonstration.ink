@@ -1,7 +1,3 @@
-// =====================================================
-// Chapter 2 — The Demonstration
-// =====================================================
-
 === demonstration_arrival ===
 After describing Porky's plight, Lisbeth and Baldy were nonplussed. Even skeptical. But Porky, more gloomy than ever at all this discussion, waved away their doubts.
 
@@ -13,9 +9,9 @@ After describing Porky's plight, Lisbeth and Baldy were nonplussed. Even skeptic
 
 He looked horrified. "Killed anybody? Oh my heavens no! How could I…"
 
-"Suppose while you have possession of some stranger, you got killed? Or committed suicide, for instance? It only takes you a second to *withdraw*, as you put it. So you'd be sitting here in your chair, but the other fellow would be dead or framed for murder."
+"Suppose while you have possession of some stranger, you got killed? Or committed suicide, for instance? It only takes you a second to withdraw, as you put it. So you'd be sitting here in your chair, but the other fellow would be dead or framed for murder."
 
-"Don't quibble," Baldy said. "Let's see him do it. That's the important part." Baldy has a good imagination, which is why his cartoons are so successful. "If he can do a thing like that, it's a *gift*," Baldy added with mounting enthusiasm. "Why, we can capitalize on it in a thousand ways — maybe make a fortune."
+"Don't quibble," Baldy said. "Let's see him do it. That's the important part." Baldy has a good imagination, which is why his cartoons are so successful. "If he can do a thing like that, it's a gift," Baldy added with mounting enthusiasm. "Why, we can capitalize on it in a thousand ways — maybe make a fortune."
 
 "I just want to be rid of it," Porky said. "But here goes."
 ~ baldy_excitement = baldy_excitement + 1
@@ -60,15 +56,15 @@ Beyond any doubt the old woman was in trouble. Four policemen were telling her o
 
 "Not me," I said. "You go. And I'll come to the asylum and try to get you out. This whole thing is crazy, and anybody connected with it…"
 
-"It may be crazy, but it works," Baldy declared, mounting his soapbox. "Listen, you lugs. Don't you realize what we've *got*? A gold mine. Fame. Fortune. We'll put Porky in the movies."
+"It may be crazy, but it works," Baldy declared, mounting his soapbox. "Listen, you lugs. Don't you realize what we've got? A gold mine. Fame. Fortune. We'll put Porky in the movies."
 
 "I don't want to be in movies," Porky said.
 
 "Vaudeville, then. The scientific wonder of the age. He takes possession of various people in the audience and spills their secrets."
 
-"*Wouldn't* that make him popular," I retorted.
+"Wouldn't that make him popular," I retorted.
 
-It was then, I confess, that the big idea came to me. Money is wonderful, but what with all the publicity the war was getting, naturally it was on your mind even more than money. *How could we use Porky's gift to help with the war?*
+It was then, I confess, that the big idea came to me. Money is wonderful, but what with all the publicity the war was getting, naturally it was on your mind even more than money. How could we use Porky's gift to help with the war?
 
 I had a vivid imagination, and the thought gave it an immense stimulus. I was about to lay it out when I noticed Lisbeth watching me with the same expression she used to have when I tried to explain what was funny about a bad joke.
 
@@ -80,11 +76,11 @@ I had a vivid imagination, and the thought gave it an immense stimulus. I was ab
 + [Let Lisbeth pull Porky aside before this goes anywhere.] -> lisbeth_intervenes
 
 === support_war ===
-I told them. Nazi submarines, lurking off our coast, we knew that. We go down near Sandy Hook. Porky doesn't actually have to *see* his victim, that's been demonstrated. He just mentally selects one of the lurking submarines and takes possession of its Commander. Has the Commander run the sub up on shore and smash it. Or open a valve and sink it. Or blow it up with one of its own torpedoes. In one split second he jumps out to the safety of his own body, which is with us on shore. Then he jumps into another sub. Then another. The Battle of the Atlantic is the big hitch in our war effort. Why, this would change everything.
+I told them. Nazi submarines, lurking off our coast, we knew that. We go down near Sandy Hook. Porky doesn't actually have to see his victim, that's been demonstrated. He just mentally selects one of the lurking submarines and takes possession of its Commander. Has the Commander run the sub up on shore and smash it. Or open a valve and sink it. Or blow it up with one of its own torpedoes. In one split second he jumps out to the safety of his own body, which is with us on shore. Then he jumps into another sub. Then another. The Battle of the Atlantic is the big hitch in our war effort. Why, this would change everything.
 
 "And kill himself, too," Lisbeth murmured. "Dad, I thought you had better sense than this."
 
-"Not at all," I said. But Baldy was already on it, getting bigger by the second. *When Hitler finds his subs aren't coming back* and so on, and from there to the Emperor's battleships, Japan's generals ordering their men in the wrong direction, what chaos, what a cinch.
+"Not at all," I said. But Baldy was already on it, getting bigger by the second. When Hitler finds his subs aren't coming back and so on, and from there to the Emperor's battleships, Japan's generals ordering their men in the wrong direction, what chaos, what a cinch.
 
 Porky, very quietly: "Well, I won't do it."
 
@@ -96,7 +92,7 @@ Porky, very quietly: "Well, I won't do it."
 -> planning_evening
 
 === dial_back ===
-I started to say it, and then I caught Lisbeth's expression and let it taper into something more measured. The submarines, yes, but only if Porky was sure. Only as a test. *One* sub just see how the withdrawal worked from a body in real danger.
+I started to say it, and then I caught Lisbeth's expression and let it taper into something more measured. The submarines, yes, but only if Porky was sure. Only as a test. One sub just see how the withdrawal worked from a body in real danger.
 
 Porky listened, his hands shaking a little. "I sure hope it works," he said.
 
@@ -107,11 +103,11 @@ Baldy was disappointed in me — I could see him deflating from a vaudeville imp
 -> planning_evening
 
 === lisbeth_intervenes ===
-"Wait," Lisbeth said. She hadn't said much for a while, but the way she said *wait* was the way her mother used to. Baldy and I both shut up.
+"Wait," Lisbeth said. She hadn't said much for a while, but the way she said wait was the way her mother used to. Baldy and I both shut up.
 
 She turned to Porky. "I want to talk to you. Outside. Now."
 
-Porky followed her like a man who has been thrown a rope in a flood. They went out into the hall. Through the door I could hear, faintly, Lisbeth's voice — low, urgent, kind. After a few minutes they came back in, and Porky looked entirely different. Not cured, exactly, but *seen*.
+Porky followed her like a man who has been thrown a rope in a flood. They went out into the hall. Through the door I could hear, faintly, Lisbeth's voice — low, urgent, kind. After a few minutes they came back in, and Porky looked entirely different. Not cured, exactly, but seen.
 
 "I've decided," he said. "I'm going to keep working on it. But not like that. Not for the war."
 
@@ -138,9 +134,9 @@ We planned it for about an hour. About eleven o'clock that same night, we'd all 
 
 "Should you go AWOL," Baldy put in, and he didn't smile when he said it, "I will personally see that you get put into an insane asylum for the rest of your natural life."
 
-It occurred to me to mention that Porky could jump *out* of an insane asylum without much trouble, but I decided to keep that to myself.
+It occurred to me to mention that Porky could jump out of an insane asylum without much trouble, but I decided to keep that to myself.
 
-About quarter past eleven, Lisbeth and Porky came back. They had been to a double-feature movie — *Love's Lingering* and *Passion's Pretty Flowers*. They were very happy about it. But they sobered down when I mentioned that Porky had the fate of the war on his hands; and by the time we got down to the seashore, Porky was looking a little white around the gills.
+About quarter past eleven, Lisbeth and Porky came back. They had been to a double-feature movie — Love's Lingering and Passion's Pretty Flowers. They were very happy about it. But they sobered down when I mentioned that Porky had the fate of the war on his hands; and by the time we got down to the seashore, Porky was looking a little white around the gills.
 
 ~ went_to_beach = true
 ~ act = beach

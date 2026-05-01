@@ -26,7 +26,7 @@ The next day, Baldy and I made charts in regular military fashion, outlining our
 
 "Yes, sir," Porky agreed. "I'm all right. But you see, sir, there's er…something we want to tell you."
 
-That *sir* sounded sort of queer, but I admit I didn't get the idea.
+That sir sounded sort of queer, but I admit I didn't get the idea.
 
 "He loves me and I love him and so it's all settled," Lisbeth said.
 
@@ -46,7 +46,7 @@ But Porky didn't look at all as though he were ready to start.
 
 "Well," he said, "that's another thing I have to tell you." He looked very pleased. "I haven't got it any more. I've lost it."
 
-Baldy came to life. "What's *that* mean? What in the devil haven't you got any more? What have you lost?"
+Baldy came to life. "What's that mean? What in the devil haven't you got any more? What have you lost?"
 
 "My gift. That's what you called it," Porky said. "It's gone. Vanished. I can't do it any more. I tried, honest I did, but it's certainly gone."
 
@@ -84,7 +84,7 @@ Lisbeth came in. I'd wished Porky was standing there beside her. She just stood 
 
 I stood up. Baldy stood up.
 
-"At the beach," she said. "Last night. He went in for the second sub. Or maybe it was the third, I lost count, I lost *count*, Dad. And eventually the body on the sand stopped breathing, and I don't know if it was the body or him or what, but the body stopped, and an hour later I was riding in an ambulance with a corpse, and I thought you should know."
+"At the beach," she said. "Last night. He went in for the second sub. Or maybe it was the third, I lost count, I lost count, Dad. And eventually the body on the sand stopped breathing, and I don't know if it was the body or him or what, but the body stopped, and an hour later I was riding in an ambulance with a corpse, and I thought you should know."
 
 Baldy sat down very slowly.
 
@@ -94,15 +94,15 @@ Baldy sat down very slowly.
 
 She told us the rest in a flat administrative voice. The hospital had it down as a heart attack. There would be a small funeral. His parents in Indiana didn't know about me, or her, or any of it. The boarding house room would need to be cleared.
 
-She did not say *you killed him*. She did not have to. We sat with her in my study until the gray of morning came up against the window, and then she got up and put her coat on properly and left.
+She did not say you killed him. She did not have to. We sat with her in my study until the gray of morning came up against the window, and then she got up and put her coat on properly and left.
 
 I have not, since, written about anything that mattered. I tell myself I will. But you can see, there isn't a thing I can do about it.
 -> END_porky_lost
 
 === ending_exposed ===
-The headline, when it came, was on the third page of the *Daily News* and ran eight columns wide:
+The headline, when it came, was on the third page of the Daily News and ran eight columns wide:
 
-**SANDY HOOK "GIANT" SIGHTED, TWO COAST GUARDSMEN, FISHERMAN AGREE. NAVY DENIES!**
+SANDY HOOK "GIANT" SIGHTED, TWO COAST GUARDSMEN, FISHERMAN AGREE. NAVY DENIES!
 
 There was a sketch. The sketch was reasonably accurate. There were quotes. The fisherman had been a hundred yards offshore in his boat. The two Coast Guardsmen had been a half-mile down the beach. They all said the same thing: a green man-shape, hundreds of feet tall, in the water.
 

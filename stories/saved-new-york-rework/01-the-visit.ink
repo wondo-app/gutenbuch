@@ -1,7 +1,3 @@
-// =====================================================
-// Chapter 1 — The Visit
-// =====================================================
-
 === start ===
 It was a warmish afternoon last spring and I was sitting in my study trying to figure out a plot. Thats the kind of trouble a writer gets into when nothing in the world wants to be written about and that's when Porky Jenks came in to see me.
 
@@ -13,7 +9,7 @@ I used to know Porky quite well though hadn't seen him in two years. Likeable yo
 
 "Oh," I said.
 
-He told me the rest in fits and starts. His ego, id, personality or *something* didn't seem to want to stay put in his body anymore. A week ago he'd been sitting by his window when suddenly he wasn't himself at all — he was a man walking down the street past his window, a perfectly strange man, henpecked and late getting home. He'd ducked into a Bar and Grill, absorbed whiskeys, and *withdrawn* before things got out of hand.
+He told me the rest in fits and starts. His ego, id, personality or something didn't seem to want to stay put in his body anymore. A week ago he'd been sitting by his window when suddenly he wasn't himself at all — he was a man walking down the street past his window, a perfectly strange man, henpecked and late getting home. He'd ducked into a Bar and Grill, absorbed whiskeys, and withdrawn before things got out of hand.
 
 I sat with this for a moment. I've juggled with weird things like that for years — strictly on paper, you understand. Facing the paranormal in real life gave me the creeps. Because Porky was telling me the truth. I wouldn't doubt it. He was visibly frightened out of his wits.
 
@@ -34,7 +30,7 @@ I was about to pick someone when a knock at the door froze the question.
 -> end_of_visit
 
 === hear_full_story ===
-He told me more. The henpecked husband at the bar. Porky spilling all the man's secret thoughts about his wife to the bartender, and then withdrawing before things got into a real jam. The little woman upstairs in his boarding house who'd suddenly socked her bruiser of a husband and fled the room. That was Porky too, just last night, taking sides in a marital argument he'd happened to inhabit. He didn't even have to *see* the host body, he told me. The woman upstairs had been a voice through a ceiling. He'd just slid in.
+He told me more. The henpecked husband at the bar. Porky spilling all the man's secret thoughts about his wife to the bartender, and then withdrawing before things got into a real jam. The little woman upstairs in his boarding house who'd suddenly socked her bruiser of a husband and fled the room. That was Porky too, just last night, taking sides in a marital argument he'd happened to inhabit. He didn't even have to see the host body, he told me. The woman upstairs had been a voice through a ceiling. He'd just slid in.
 
 "Ray, a fellow shouldn't be able to do a thing like this. It's not normal, is it?"
 
@@ -63,7 +59,7 @@ The knock at the door was Lisbeth and Baldy Green walking in on us.
 
 Lisbeth is my daughter. A nice girl, good looking with a mop of unruly wavy brown hair. She wants to be a career girl. A newspaper reporter of the sob-sister variety, big by-line, holding down the City Desk and carrying the paper. Baldy is a cartoonist on one of the big dailies; middle-aged, with a wife and six kids, a good friend of mine. He'd just gotten Lisbeth a job on his paper. Neither of them had ever met Porky Jenks and now was not exactly Porky's finest.
 
-I made the introductions. And because *somebody* had to explain Porky's frightened aspect, and maybe I didn't look too normal mysely, I thought I'd better explain the problem in hand.
+I made the introductions. And because somebody had to explain Porky's frightened aspect, and maybe I didn't look too normal mysely, I thought I'd better explain the problem in hand.
 
 ~ act = demonstration
 -> demonstration_arrival
